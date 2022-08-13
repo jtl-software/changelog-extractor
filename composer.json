@@ -1,0 +1,14 @@
+{
+  "require": {
+    "php": ">=7.4|>8.0",
+    "ext-json": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Jtl\\Changelog\\Parser\\": "src/"
+    }
+  },
+  "require-dev": {
+    "symfony/var-dumper": "^5.4"
+  }
+}
