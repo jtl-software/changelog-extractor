@@ -18,4 +18,3 @@ class Extractor
         $application->run();
     }
 }
-

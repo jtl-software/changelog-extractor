@@ -79,7 +79,7 @@ class ExtractCommand extends Command
         }
 
         // No extra work needed if this is not a phar file.
-        if (strpos($path,'phar://')  !== 0) {
+        if (strpos($path, 'phar://')  !== 0) {
             return realpath($path);
         }
 
@@ -103,6 +103,5 @@ class ExtractCommand extends Command
         }
 
         return false;
-
     }
 }
