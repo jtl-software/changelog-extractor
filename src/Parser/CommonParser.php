@@ -1,6 +1,6 @@
 <?php
 
-namespace Jtl\Changelog\Extractor;
+namespace Jtl\Changelog\Extractor\Parser;
 
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;

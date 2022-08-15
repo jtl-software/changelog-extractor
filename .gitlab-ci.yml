@@ -23,6 +23,7 @@ include:
 stages:
   - cache
   - test
+  - build
 
 build_cache:
   stage: cache
@@ -37,4 +38,15 @@ build_cache:
       - composer.lock
 
 code_quality:
+  variables:
+    CQ_FOLDERS: 'src/ bin/ extractor.php buildPhar.php'
   before_script: []
+
+buildPhar:
+  stage: build
+  script:
+    - php buildPhar.php
+  artifacts:
+    paths:
+      - extractor.phar
+    expire_in: 1 day
