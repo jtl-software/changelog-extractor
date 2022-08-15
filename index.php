@@ -1,9 +1,11 @@
 <?php
 
-use Jtl\Changelog\Parser\Parsers\CoreParser;
+use Jtl\Changelog\Extractor\CommonParser;
 
 require_once 'vendor/autoload.php';
 
-$parser = new CoreParser(__DIR__.'/examples/changelog.md');
+$parser = new CommonParser();
+$parser->setFile(__DIR__ . '/common/example.md');
 
-dump($parser->parse());
+echo($parser->parseToJson());
+//echo($parser->toXml());
