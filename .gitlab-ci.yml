@@ -45,7 +45,7 @@ code_quality:
 buildPhar:
   stage: build
   script:
-    - php buildPhar.php
+    - php --define phar.readonly=0 buildPhar.php
   artifacts:
     paths:
       - extractor.phar
