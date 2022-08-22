@@ -4,7 +4,8 @@ See example.md for more examples.
 Everything before the top most Version is ignored, so you can write there whatever you want or leave it empty
 
 ## Versions (Required)
-Version must be defined with a Level 2 Heading and should follow [Semantic Versioning](https://semver.org/)
+Version must be defined with a Level 2 Heading and should follow [Semantic Versioning](https://semver.org/)  
+You may add a `unreleased` version, this will be ignored
 
 ## Security Flag (Optional)
 The Security Flag must be defined by being **BOLD** and must be in the same line as the Version

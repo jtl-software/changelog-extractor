@@ -94,6 +94,9 @@ class CommonParser
                     $changes[$oneChange['version']] = $oneChange;
                 }
                 $oneChange = $this->handleHeading($node);
+                if(strtolower($oneChange['version']) === 'unreleased' ) {
+                    $oneChange = [];
+                }
             } elseif ($node instanceof ListBlock) {
                 $oneChange['changes'] = $this->handleList($node);
             } elseif ($node instanceof Paragraph && !empty($oneChange)) {

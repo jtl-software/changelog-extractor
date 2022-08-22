@@ -2,6 +2,8 @@
 
 Common format Changelog Example, see definition.md for more details.
 
+## Unreleased
+- ignored entry
 
 ## 1.1.1 _2022-08-13_
 - ABC-123 - Some Changes

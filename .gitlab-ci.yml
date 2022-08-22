@@ -17,8 +17,8 @@ default:
       - composer.lock
 
 include:
-  - project: 'connector/connector-utils/php-code-quality'
-    file: 'ci.yaml'
+  - project: 'connector/connector-utils/CI-Templates'
+    file: 'code-quality/ci.yaml'
 
 stages:
   - cache
