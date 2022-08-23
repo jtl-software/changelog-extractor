@@ -35,6 +35,13 @@ class ExtractCommand extends Command
                 InputOption::VALUE_REQUIRED,
                 'Output file',
                 'CHANGELOG.json'
+            )
+            ->addOption(
+                'context',
+                'c',
+                InputOption::VALUE_REQUIRED,
+                'Context File, changelog will be placed in `changes` key in json',
+                null
             );
     }
 
@@ -44,9 +51,15 @@ class ExtractCommand extends Command
         $path = $this->realpath($file);
         $ticketLink = $input->getOption('ticket-link');
         $outputFile = $input->getOption('output');
+        $contextFile = $input->getOption('context');
 
         if (!file_exists($path)) {
             $output->writeln(sprintf('<error>File "%s" does not exist</error>', $file));
+            return Command::FAILURE;
+        }
+
+        if($contextFile !== null && !file_exists($this->realpath($contextFile))) {
+            $output->writeln(sprintf('<error>Context File "%s" does not exist</error>', $contextFile));
             return Command::FAILURE;
         }
 
@@ -54,7 +67,14 @@ class ExtractCommand extends Command
         $parser->setFile($path);
         $parser->setTicketLink($ticketLink);
 
-        $json = $parser->parseToJson();
+
+        if($contextFile !== null) {
+            $context = json_decode(file_get_contents($this->realpath($contextFile)), true);
+            $context['changes'] = $parser->parse();
+            $json = json_encode($context);
+        }else{
+            $json = $parser->parseToJson();
+        }
 
         file_put_contents($outputFile, $json);
 
