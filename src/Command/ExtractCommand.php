@@ -40,7 +40,7 @@ class ExtractCommand extends Command
                 'context',
                 'c',
                 InputOption::VALUE_REQUIRED,
-                'Context File, changelog will be placed in `changes` key in json',
+                'Context File, changelog will be placed in `changelog` key in json',
                 null
             );
     }
@@ -70,7 +70,7 @@ class ExtractCommand extends Command
 
         if($contextFile !== null) {
             $context = json_decode(file_get_contents($this->realpath($contextFile)), true);
-            $context['changes'] = $parser->parse();
+            $context['changelog'] = $parser->parse();
             $json = json_encode($context);
         }else{
             $json = $parser->parseToJson();
