@@ -18,7 +18,10 @@ Common format Changelog Example, see definition.md for more details.
 - Some Changes without a Ticket
 
 ## 1.0.0
-Initial Release Comment __BOLD__ _ITALIC_
+Initial Release Comment __BOLD__ _ITALIC_  
+    - list  
+    - entry
+
 - ABC-123 - Some Changes
 - ABC-124 - Some more Changes
 - _ABC-124_ - Some _more_ Changes
