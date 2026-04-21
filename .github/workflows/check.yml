@@ -1,0 +1,59 @@
+name: check
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+jobs:
+  code-quality:
+    name: Code Quality (PHPCS + PHPStan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          tools: composer:v2, phpcs, phpstan
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run PHPCS
+        run: phpcs --standard=PSR12 src/ bin/ extractor.php buildPhar.php
+
+      - name: Run PHPStan
+        run: phpstan analyse --level=5 src/
+
+  action-self-test:
+    name: PHAR Fixture Self-Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Build PHAR from source
+        run: php --define phar.readonly=0 buildPhar.php
+
+      - name: Run fixture test (prepare, extract, verify)
+        run: bash .github/scripts/verify-fixture.sh
+
+      - name: Missing context must hard-fail (E2.3)
+        run: bash .github/scripts/verify-missing-context-fails.sh

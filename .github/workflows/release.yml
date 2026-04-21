@@ -1,0 +1,50 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build PHAR and create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          tools: composer:v2
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-dev
+
+      - name: Build PHAR
+        run: php --define phar.readonly=0 buildPhar.php
+
+      - name: Full self-test against fixture
+        run: bash .github/scripts/verify-fixture.sh
+
+      - name: Create GitHub Release with PHAR asset
+        uses: softprops/action-gh-release@v3
+        with:
+          files: changelog-extractor.phar
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+
+      - name: Update rolling v2 tag
+        if: startsWith(github.ref_name, 'v2')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          SHA="${GITHUB_SHA}"
+          echo "Updating rolling v2 tag to point at ${SHA} (from tag ${GITHUB_REF_NAME})"
+          git tag -f v2 "${SHA}"
+          git push --force origin refs/tags/v2

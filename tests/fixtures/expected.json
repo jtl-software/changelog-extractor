@@ -1,0 +1,11 @@
+{
+    "_comment": "Reference document for manual review. The automated self-test checks structural properties via jq (see .github/workflows/check.yml), not a byte-exact comparison. Reason: the league/commonmark HTML rendering is whitespace-sensitive and hard to pin down.",
+    "context_keys_expected": ["name", "label", "description", "changelog"],
+    "changelog_versions_expected": ["1.1.0", "1.0.0"],
+    "unreleased_must_be_absent": true,
+    "v1_1_0_changes_count": 2,
+    "v1_0_0_changes_count": 2,
+    "v1_0_0_must_have_security": true,
+    "v1_0_0_must_have_description": true,
+    "ticket_link_default_host": "issues.jtl-software.de"
+}
