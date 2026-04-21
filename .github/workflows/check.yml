@@ -27,7 +27,14 @@ jobs:
       - name: Run PHPCS (ConnectorStandard via phpcs.xml.dist)
         run: vendor/bin/phpcs
 
-      - name: Run PHPStan
+      # PHPStan matches the GitLab code-quality template's default
+      # (ENABLE_PHPSTAN=false there, i.e. PHPStan never ran). We run it
+      # here as an informational layer but keep it non-blocking so the
+      # migration preserves legacy behaviour. Failures show up in the
+      # step log and as a grey "failed (continue-on-error)" marker on
+      # the PR, but don't gate the merge.
+      - name: Run PHPStan (informational, non-blocking)
+        continue-on-error: true
         run: vendor/bin/phpstan analyse --level=5 src/
 
   action-self-test:

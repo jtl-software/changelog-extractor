@@ -203,7 +203,10 @@ default branch):
 - PHPCS against `src/`, `bin/`, `extractor.php`, `buildPhar.php` using
   the `ConnectorStandard` ruleset shipped in `phpcs.xml.dist` (PSR12
   base plus the JTL-connector sniffs from `slevomat/coding-standard`).
-- PHPStan (level 5) against `src/`.
+- PHPStan (level 5) against `src/`. Runs as an informational,
+  non-blocking step (the legacy GitLab CI defaulted to
+  `ENABLE_PHPSTAN=false` and never ran PHPStan at all; we keep the
+  findings visible in the step log without gating the merge).
 - Fixture self-test: builds the PHAR, runs it against `tests/fixtures/`
   and asserts structural properties of the result (see
   `tests/fixtures/README.md`).
