@@ -32,14 +32,21 @@ jobs:
       - name: Full self-test against fixture
         run: bash .github/scripts/verify-fixture.sh
 
-      - name: Create GitHub Release with PHAR asset
+      - name: Generate PHAR SHA256 checksum sidecar
+        run: |
+          sha256sum changelog-extractor.phar > changelog-extractor.phar.sha256
+          cat changelog-extractor.phar.sha256
+
+      - name: Create versioned GitHub Release with PHAR asset
         uses: softprops/action-gh-release@v3
         with:
-          files: changelog-extractor.phar
+          files: |
+            changelog-extractor.phar
+            changelog-extractor.phar.sha256
           generate_release_notes: true
           fail_on_unmatched_files: true
 
-      - name: Update rolling v2 tag
+      - name: Update rolling v2 git tag
         if: startsWith(github.ref_name, 'v2')
         run: |
           git config user.name "github-actions[bot]"
@@ -48,3 +55,26 @@ jobs:
           echo "Updating rolling v2 tag to point at ${SHA} (from tag ${GITHUB_REF_NAME})"
           git tag -f v2 "${SHA}"
           git push --force origin refs/tags/v2
+
+      # The reusable workflow downloads the PHAR from
+      # https://github.com/jtl-software/changelog-extractor/releases/download/v2/changelog-extractor.phar
+      # which requires a GitHub Release whose tag name is literally `v2`.
+      # The step above only moves the git tag; it does not create or update
+      # the Release. So we publish a second Release with tag_name: v2
+      # that carries the same PHAR. Re-uploading overwrites the existing
+      # asset on subsequent v2.x.y releases.
+      - name: Update rolling v2 Release (download target for reusable workflow)
+        if: startsWith(github.ref_name, 'v2')
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v2
+          name: v2 (rolling pointer to latest v2.x.y)
+          body: |
+            Rolling release for the `v2` line. The attached PHAR is updated
+            on every `v2.x.y` publish. Exact version info is in the
+            corresponding `v2.x.y` release.
+          files: |
+            changelog-extractor.phar
+            changelog-extractor.phar.sha256
+          fail_on_unmatched_files: true
+          make_latest: false

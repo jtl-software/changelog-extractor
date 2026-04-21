@@ -41,5 +41,6 @@ try {
 
     echo "$pharFile successfully created" . PHP_EOL;
 } catch (Exception $e) {
-    echo $e->getMessage();
+    fwrite(STDERR, $e->getMessage() . PHP_EOL);
+    exit(1);
 }

@@ -76,9 +76,11 @@ jobs:
           coverage: none
 
       - name: Download PHAR and extract changelog into system context
+        env:
+          SYSTEM_NAME: ${{ inputs.system-name }}
         run: |
           bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" \
-            "${{ inputs.system-name }}" \
+            "${SYSTEM_NAME}" \
             "${CHANGELOG_PAGE}" \
             "${RUNNER_TEMP}/CHANGELOG.md"
 
@@ -112,6 +114,6 @@ jobs:
         if: steps.cpr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: jtl-software/${{ env.CHANGELOG_PAGE }}
           PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
-        working-directory: ${{ env.CHANGELOG_PAGE }}
         run: gh pr merge --auto --squash "${PR_NUMBER}"

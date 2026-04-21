@@ -25,6 +25,14 @@ SYSTEM_NAME="$1"
 TARGET_REPO_DIR="$2"
 CHANGELOG="$3"
 
+# Reject system names that could escape storage/systems/ or contain shell
+# metacharacters. The allowed character set matches what changelog-page
+# accepts as a system identifier: alphanumerics, dash, underscore, dot.
+if ! [[ "${SYSTEM_NAME}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+  echo "::error::Invalid system-name: '${SYSTEM_NAME}'. Must match ^[A-Za-z0-9][A-Za-z0-9._-]*$" >&2
+  exit 2
+fi
+
 CONTEXT_FILE="${TARGET_REPO_DIR}/storage/systems/${SYSTEM_NAME}.json"
 
 if [ ! -f "${CONTEXT_FILE}" ]; then
@@ -33,10 +41,20 @@ if [ ! -f "${CONTEXT_FILE}" ]; then
 fi
 
 PHAR="$(mktemp)"
-trap 'rm -f "${PHAR}"' EXIT
+SHA_FILE="$(mktemp)"
+trap 'rm -f "${PHAR}" "${SHA_FILE}"' EXIT
 
-curl -fsSL -o "${PHAR}" \
-  https://github.com/jtl-software/changelog-extractor/releases/download/v2/changelog-extractor.phar
+PHAR_URL="https://github.com/jtl-software/changelog-extractor/releases/download/v2/changelog-extractor.phar"
+
+curl -fsSL -o "${PHAR}" "${PHAR_URL}"
+curl -fsSL -o "${SHA_FILE}" "${PHAR_URL}.sha256"
+
+EXPECTED_SHA="$(awk '{print $1}' "${SHA_FILE}")"
+ACTUAL_SHA="$(sha256sum "${PHAR}" | awk '{print $1}')"
+if [ "${EXPECTED_SHA}" != "${ACTUAL_SHA}" ]; then
+  echo "::error::PHAR checksum mismatch. expected=${EXPECTED_SHA} actual=${ACTUAL_SHA}" >&2
+  exit 1
+fi
 
 php "${PHAR}" \
   --file "${CHANGELOG}" \

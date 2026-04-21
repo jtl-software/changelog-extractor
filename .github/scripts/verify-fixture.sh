@@ -56,10 +56,10 @@ test "$(jq -r '.changelog["1.0.0"].security' "$RESULT")" = "true"
 test -n "$(jq -r '.changelog["1.0.0"].description' "$RESULT")"
 test "$(jq '.changelog["1.0.0"].changes | length' "$RESULT")" = "2"
 
-echo "Ticket link default must be applied to non-link entries"
-test "$(jq -r '.changelog["1.1.0"].changes[0].link' "$RESULT")" = "https://issues.jtl-software.de/issues/DP-100"
+echo "Ticket link default must be applied to DP-100 (match by link value, position-independent)"
+test "$(jq '.changelog["1.1.0"].changes | any(.link == "https://issues.jtl-software.de/issues/DP-100")' "$RESULT")" = "true"
 
-echo "Explicit link must be kept"
-test "$(jq -r '.changelog["1.0.0"].changes[1].link' "$RESULT")" = "https://example.com/DP-002"
+echo "Explicit link https://example.com/DP-002 must be kept (match by link value, position-independent)"
+test "$(jq '.changelog["1.0.0"].changes | any(.link == "https://example.com/DP-002")' "$RESULT")" = "true"
 
 echo "All structural assertions passed."
