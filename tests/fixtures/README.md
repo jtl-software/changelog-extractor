@@ -1,6 +1,6 @@
 # Test fixtures
 
-Minimal data set for the fixture self-test in `.github/workflows/check.yml`.
+Minimal data set for the fixture self-test in `.github/workflows/check.yaml`.
 
 ## Contents
 
@@ -14,5 +14,5 @@ Minimal data set for the fixture self-test in `.github/workflows/check.yml`.
 ## Maintenance
 
 The automated self-test checks structural properties via `jq` assertions
-(see `.github/workflows/check.yml`). `expected.json` is a human-readable
+(see `.github/workflows/check.yaml`). `expected.json` is a human-readable
 reference document, not a golden file.

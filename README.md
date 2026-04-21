@@ -8,7 +8,7 @@ repository.
 This repo ships two things:
 
 1. The **PHP CLI tool** (`src/`, `bin/changelog-extractor`, distributed as a PHAR)
-2. A **reusable workflow** (`.github/workflows/update-changelog.yml`) for the
+2. A **reusable workflow** (`.github/workflows/update-changelog.yaml`) for the
    end-to-end flow including cross-repo PR and auto-merge
 
 ## Purpose
@@ -32,9 +32,9 @@ consistency with the JTL production servers and self-hosted runners. When
 the internal PHP target version changes, four places in this repo have to
 be updated:
 
-- `.github/workflows/update-changelog.yml` — `setup-php` step
-- `.github/workflows/check.yml` — every `setup-php` step
-- `.github/workflows/release.yml` — `setup-php` step
+- `.github/workflows/update-changelog.yaml` — `setup-php` step
+- `.github/workflows/check.yaml` — every `setup-php` step
+- `.github/workflows/release.yaml` — `setup-php` step
 - `composer.json` — `require.php`
 
 See the "PHP version upgrade" section below.
@@ -69,7 +69,7 @@ The regular case. The reusable workflow handles the end-to-end flow:
 generating the app token, checking out the required repos, running the
 extractor, opening a PR in `changelog-page`, and enabling auto-merge.
 
-In the consumer repo as `.github/workflows/update-changelog.yml`:
+In the consumer repo as `.github/workflows/update-changelog.yaml`:
 
 ```yaml
 name: update-changelog
@@ -80,7 +80,7 @@ on:
 
 jobs:
   call:
-    uses: jtl-software/changelog-extractor/.github/workflows/update-changelog.yml@v2
+    uses: jtl-software/changelog-extractor/.github/workflows/update-changelog.yaml@v2
     with:
       system-name: shopify
       app-id: ${{ vars.GH_APP_ID }}
@@ -108,7 +108,7 @@ The generated app token is restricted to `repositories: [changelog-page]`
 
 ## Release process
 
-Releases are automated via `.github/workflows/release.yml` when a `v*` tag
+Releases are automated via `.github/workflows/release.yaml` when a `v*` tag
 is pushed:
 
 1. Create the tag:
@@ -137,9 +137,9 @@ handles every subsequent release automatically.
 When the internal PHP target version changes (e.g. to 8.4), four places in
 this repo need to be touched:
 
-1. `.github/workflows/update-changelog.yml` — `setup-php` step
-2. `.github/workflows/check.yml` — every `setup-php` step
-3. `.github/workflows/release.yml` — `setup-php` step
+1. `.github/workflows/update-changelog.yaml` — `setup-php` step
+2. `.github/workflows/check.yaml` — every `setup-php` step
+3. `.github/workflows/release.yaml` — `setup-php` step
 4. `composer.json` — `require.php`
 
 After the change run `composer update` locally and commit `composer.lock`.
@@ -197,7 +197,7 @@ there.
 
 ## Tests
 
-`.github/workflows/check.yml` runs on every PR (and on push to the
+`.github/workflows/check.yaml` runs on every PR (and on push to the
 default branch):
 
 - PHPCS against `src/`, `bin/`, `extractor.php`, `buildPhar.php` using
