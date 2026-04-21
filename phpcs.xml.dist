@@ -1,0 +1,38 @@
+<ruleset name="ConnectorStandard">
+    <!-- Files PHPCS scans when called without explicit path arguments. -->
+    <file>src</file>
+    <file>bin</file>
+    <file>extractor.php</file>
+    <file>buildPhar.php</file>
+
+    <!--
+        Match the legacy GitLab CI behaviour (ci-templates/code-quality/ci.yaml):
+        CQ_IGNORE_ERRORS_ON_EXIT=1 and CQ_IGNORE_WARNINGS_ON_EXIT=1 caused
+        PHPCS to report findings but exit zero, so the job was informational
+        rather than blocking. Preserved here to avoid a behaviour change
+        during the GitLab->GitHub migration.
+    -->
+    <config name="ignore_errors_on_exit" value="1"/>
+    <config name="ignore_warnings_on_exit" value="1"/>
+
+    <rule ref="SlevomatCodingStandard.Namespaces.FullyQualifiedGlobalFunctions"/>
+    <rule ref="SlevomatCodingStandard.Namespaces.FullyQualifiedGlobalConstants"/>
+    <rule ref="PSR12"/>
+    <rule ref="Squiz.Functions.FunctionDeclarationArgumentSpacing">
+        <exclude name="Squiz.Functions.FunctionDeclarationArgumentSpacing.SpaceBeforeEquals"/>
+        <exclude name="Squiz.Functions.FunctionDeclarationArgumentSpacing.SpacingAfterHint"/>
+    </rule>
+    <rule ref="PSR2.Classes.PropertyDeclaration">
+            <exclude name="PSR2.Classes.PropertyDeclaration.SpacingAfterType"/>
+    </rule>
+    <rule ref="Generic.Formatting.MultipleStatementAlignment">
+        <properties>
+            <property name="maxPadding" value="100"/>
+<!--            <property name="ignoreMultiLine" value="true"/>-->
+        </properties>
+    </rule>
+<!--    <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">-->
+<!--        <exclude name="SlevomatCodingStandard.TypeHints.DeclareStrictTypes.IncorrectStrictTypesFormat"/>-->
+<!--    </rule>-->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+</ruleset>

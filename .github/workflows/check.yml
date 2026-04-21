@@ -18,17 +18,17 @@ jobs:
         with:
           php-version: '8.3'
           extensions: json
-          tools: composer:v2, phpcs, phpstan
+          tools: composer:v2
           coverage: none
 
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      - name: Run PHPCS
-        run: phpcs --standard=PSR12 src/ bin/ extractor.php buildPhar.php
+      - name: Run PHPCS (ConnectorStandard via phpcs.xml.dist)
+        run: vendor/bin/phpcs
 
       - name: Run PHPStan
-        run: phpstan analyse --level=5 src/
+        run: vendor/bin/phpstan analyse --level=5 src/
 
   action-self-test:
     name: PHAR Fixture Self-Test

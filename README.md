@@ -197,15 +197,23 @@ there.
 
 ## Tests
 
-`.github/workflows/check.yml` runs on every push and PR:
+`.github/workflows/check.yml` runs on every PR (and on push to the
+default branch):
 
-- PHPCS (PSR12) against `src/`, `bin/`, `extractor.php`, `buildPhar.php`
-- PHPStan (level 5) against `src/`
+- PHPCS against `src/`, `bin/`, `extractor.php`, `buildPhar.php` using
+  the `ConnectorStandard` ruleset shipped in `phpcs.xml.dist` (PSR12
+  base plus the JTL-connector sniffs from `slevomat/coding-standard`).
+- PHPStan (level 5) against `src/`.
 - Fixture self-test: builds the PHAR, runs it against `tests/fixtures/`
   and asserts structural properties of the result (see
-  `tests/fixtures/README.md`)
+  `tests/fixtures/README.md`).
 - Negative test: missing context file must produce a non-zero exit code
-  (E2.3)
+  (E2.3).
+
+PHPCS, PHPStan and their standards are declared in `composer.json`
+under `require-dev` so `composer install` provisions the full toolchain
+locally; CI invokes them via `vendor/bin/phpcs` and
+`vendor/bin/phpstan`.
 
 ## License / author
 
