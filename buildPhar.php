@@ -2,7 +2,7 @@
 
 
 try {
-    $pharFile = 'extractor.phar';
+    $pharFile = 'changelog-extractor.phar';
 
     // clean up
     if (file_exists($pharFile)) {

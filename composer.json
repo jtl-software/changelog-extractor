@@ -9,7 +9,7 @@
     }
   ],
   "require": {
-    "php": ">=7.4|>8.0",
+    "php": ">=8.3",
     "ext-json": "*",
     "league/commonmark": "^2.3",
     "symfony/console": "^5.4"

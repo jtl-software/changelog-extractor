@@ -1,3 +1,5 @@
 .idea
+.code
+.DS_Store
 vendor
-extractor.phar
+changelog-extractor.phar
