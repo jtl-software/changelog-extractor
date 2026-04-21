@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Negative test: invoking the extractor with a non-existent --context
-# file must exit non-zero. Enforces the E2.3 hard-fail contract that
+# file must exit non-zero. Enforces the hard-fail contract that
 # consumers rely on when they haven't onboarded their system yet.
 #
 # Usage:

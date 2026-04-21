@@ -61,5 +61,5 @@ jobs:
       - name: Run fixture test (prepare, extract, verify)
         run: bash .github/scripts/verify-fixture.sh changelog-extractor.phar workspace
 
-      - name: Missing context must hard-fail (E2.3)
+      - name: Missing context must hard-fail
         run: bash .github/scripts/verify-missing-context-fails.sh changelog-extractor.phar workspace

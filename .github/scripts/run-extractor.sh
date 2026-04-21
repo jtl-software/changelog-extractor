@@ -11,8 +11,8 @@
 # Example:
 #   run-extractor.sh shopify changelog-page /tmp/CHANGELOG.md
 #
-# Fails (non-zero exit) if the target context file doesn't exist (E2.3)
-# or if any command fails.
+# Fails (non-zero exit) if the target context file doesn't exist or if
+# any command fails.
 
 set -euo pipefail
 
