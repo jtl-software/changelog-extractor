@@ -5,16 +5,20 @@
 # consumers rely on when they haven't onboarded their system yet.
 #
 # Usage:
-#   verify-missing-context-fails.sh [phar-path] [workspace-dir]
+#   verify-missing-context-fails.sh <phar-path> <workspace-dir>
 #
-# Defaults:
-#   phar-path:     changelog-extractor.phar
-#   workspace-dir: workspace
+# Example:
+#   verify-missing-context-fails.sh changelog-extractor.phar workspace
 
 set -euo pipefail
 
-PHAR="${1:-changelog-extractor.phar}"
-WORKSPACE="${2:-workspace}"
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 <phar-path> <workspace-dir>" >&2
+  exit 2
+fi
+
+PHAR="$1"
+WORKSPACE="$2"
 MISSING="${WORKSPACE}/changelog-page/storage/systems/does-not-exist.json"
 
 mkdir -p "$(dirname "$MISSING")"

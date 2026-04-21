@@ -59,7 +59,7 @@ jobs:
         run: php --define phar.readonly=0 buildPhar.php
 
       - name: Run fixture test (prepare, extract, verify)
-        run: bash .github/scripts/verify-fixture.sh
+        run: bash .github/scripts/verify-fixture.sh changelog-extractor.phar workspace
 
       - name: Missing context must hard-fail (E2.3)
-        run: bash .github/scripts/verify-missing-context-fails.sh
+        run: bash .github/scripts/verify-missing-context-fails.sh changelog-extractor.phar workspace

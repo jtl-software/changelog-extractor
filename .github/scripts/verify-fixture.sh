@@ -7,18 +7,22 @@
 # structural properties.
 #
 # Usage:
-#   verify-fixture.sh [phar-path] [workspace-dir]
+#   verify-fixture.sh <phar-path> <workspace-dir>
 #
-# Defaults:
-#   phar-path:     changelog-extractor.phar  (produced by buildPhar.php)
-#   workspace-dir: workspace                 (mutable scratch space)
+# Example:
+#   verify-fixture.sh changelog-extractor.phar workspace
 #
-# Fails (non-zero exit) on any failed assertion.
+# Fails (non-zero exit) on bad argument count or any failed assertion.
 
 set -euo pipefail
 
-PHAR="${1:-changelog-extractor.phar}"
-WORKSPACE="${2:-workspace}"
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 <phar-path> <workspace-dir>" >&2
+  exit 2
+fi
+
+PHAR="$1"
+WORKSPACE="$2"
 RESULT="${WORKSPACE}/changelog-page/storage/systems/fixture.json"
 
 mkdir -p "$(dirname "$RESULT")"
