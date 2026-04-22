@@ -1,3 +1,8 @@
+# Reusable workflow (workflow_call) — consumed by connector repos on release.
+# Fetches the caller's CHANGELOG via the Contents API (no full checkout),
+# generates a scoped app token for jtl-software/changelog-page, runs the
+# extractor PHAR (downloaded from the v2 release asset), and opens an
+# auto-merge squash PR in changelog-page. Consumers pin to @v2 (rolling tag).
 name: update-changelog
 
 on:

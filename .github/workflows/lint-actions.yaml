@@ -1,3 +1,6 @@
+# Lints all GitHub Actions workflow and action files with actionlint via
+# reviewdog. Path-filtered: only runs when .github/workflows/** or
+# .github/actions/** files change.
 name: Lint GitHub Actions
 
 on:

@@ -1,3 +1,6 @@
+# Runs PHPCS (ConnectorStandard), PHPStan (level 5, non-blocking), PHAR fixture
+# self-test, and the missing-context negative test on every push to the default
+# branch and on every pull request.
 name: check
 
 on:

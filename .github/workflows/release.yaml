@@ -1,3 +1,8 @@
+# Triggered on v* tag pushes. Builds the PHAR, runs the fixture self-test
+# (gates the release — nothing is published if it fails), and creates a
+# versioned GitHub Release with the PHAR and SHA256 checksum as assets.
+# For v2.x.y tags, also moves the rolling v2 git tag and the v2 Release
+# (the download target used by the reusable workflow) to the new commit.
 name: release
 
 on:
