@@ -38,7 +38,7 @@ jobs:
       CHANGELOG_PAGE: changelog-page
     steps:
       - name: Checkout own scripts (sparse, pinned to v2)
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           repository: jtl-software/changelog-extractor
           ref: v2
@@ -58,7 +58,7 @@ jobs:
 
       - name: Generate App token (scope ${{ env.CHANGELOG_PAGE }} only)
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3
         with:
           app-id: ${{ inputs.app-id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -66,7 +66,7 @@ jobs:
           repositories: ${{ env.CHANGELOG_PAGE }}
 
       - name: Checkout ${{ env.CHANGELOG_PAGE }} (only storage/systems)
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           repository: jtl-software/${{ env.CHANGELOG_PAGE }}
           token: ${{ steps.app-token.outputs.token }}
@@ -74,7 +74,7 @@ jobs:
           sparse-checkout: storage/systems
 
       - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
         with:
           php-version: '8.3'
           extensions: json
@@ -100,7 +100,7 @@ jobs:
 
       - name: Create Pull Request in ${{ env.CHANGELOG_PAGE }}
         id: cpr
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           path: ${{ env.CHANGELOG_PAGE }}
           token: ${{ steps.app-token.outputs.token }}
