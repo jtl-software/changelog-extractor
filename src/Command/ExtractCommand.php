@@ -83,7 +83,7 @@ class ExtractCommand extends Command
 
 
     // blatant copy of PHP Code Sniffer's realpath() function
-    private function realpath($path): string
+    private function realpath(string $path): string|false
     {
         // Support the path replacement of ~ with the user's home directory.
         if (substr($path, 0, 2) === '~/') {
