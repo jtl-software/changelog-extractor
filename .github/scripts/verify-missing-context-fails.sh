@@ -23,17 +23,28 @@ MISSING="${WORKSPACE}/changelog-page/storage/systems/does-not-exist.json"
 
 mkdir -p "$(dirname "$MISSING")"
 
+OUTPUT_FILE="$(mktemp)"
+trap 'rm -f "${OUTPUT_FILE}"' EXIT
+
 set +e
 php "$PHAR" \
   --file tests/fixtures/CHANGELOG.md \
   --context "$MISSING" \
-  --output "$MISSING"
+  --output "$MISSING" \
+  > "${OUTPUT_FILE}" 2>&1
 RC=$?
 set -e
 
-if [ "$RC" = "0" ]; then
+if [ "$RC" -eq 0 ]; then
   echo "::error::Extractor must fail on missing context, but exited 0"
+  cat "${OUTPUT_FILE}" >&2
   exit 1
 fi
 
-echo "Missing context correctly produced non-zero exit code ($RC)."
+if ! grep -qi "context file.*does not exist" "${OUTPUT_FILE}"; then
+  echo "::error::Extractor exited non-zero but did not emit the expected missing-context error message"
+  cat "${OUTPUT_FILE}" >&2
+  exit 1
+fi
+
+echo "Missing context correctly produced non-zero exit code ($RC) and a clear error message."
