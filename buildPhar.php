@@ -40,7 +40,7 @@ try {
     chmod(__DIR__ . '/'     . $pharFile, 0770);
 
     echo "$pharFile successfully created" . PHP_EOL;
-} catch (Exception $e) {
+} catch (Throwable $e) {
     fwrite(STDERR, $e->getMessage() . PHP_EOL);
     exit(1);
 }
