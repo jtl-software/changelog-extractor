@@ -14,7 +14,7 @@ Two deliverables:
 # Install all dependencies (incl. dev tools)
 composer install
 
-# Run PHPCS (blocking by phpcs.xml.dist config, but exits 0 by design — legacy behaviour)
+# Run PHPCS (informational in CI; phpcs.xml.dist exits 0 by design for legacy behaviour)
 vendor/bin/phpcs
 
 # Run PHPStan (informational, non-blocking)
