@@ -37,11 +37,19 @@ jobs:
       # Target repo name and local checkout path (kept identical by convention).
       CHANGELOG_PAGE: changelog-page
     steps:
-      - name: Checkout own scripts (sparse, pinned to v2)
+      - name: Derive reusable workflow ref
+        id: workflow-ref
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          echo "ref=${WORKFLOW_REF#*@}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout own scripts (sparse, at current workflow ref)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           repository: jtl-software/changelog-extractor
-          ref: v2
+          ref: ${{ steps.workflow-ref.outputs.ref }}
           path: ${{ env.EXTRACTOR_PATH }}
           sparse-checkout: .github/scripts
 
