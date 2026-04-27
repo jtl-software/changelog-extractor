@@ -23,8 +23,12 @@ fi
 CHANGELOG_FILE="$1"
 OUTPUT_FILE="$2"
 
-gh api "repos/${GITHUB_REPOSITORY}/contents/${CHANGELOG_FILE}?ref=${GITHUB_SHA}" \
-  --jq '.content' | base64 -d > "${OUTPUT_FILE}"
+TEMP_FILE="$(mktemp)"
+trap 'rm -f "${TEMP_FILE}"' EXIT
 
-test -s "${OUTPUT_FILE}"
+gh api "repos/${GITHUB_REPOSITORY}/contents/${CHANGELOG_FILE}?ref=${GITHUB_SHA}" \
+  --header "Accept: application/vnd.github.raw" > "${TEMP_FILE}"
+
+test -s "${TEMP_FILE}"
+mv "${TEMP_FILE}" "${OUTPUT_FILE}"
 echo "Fetched $(wc -l < "${OUTPUT_FILE}") lines from ${CHANGELOG_FILE}@${GITHUB_SHA}"
