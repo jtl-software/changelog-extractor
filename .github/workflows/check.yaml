@@ -55,8 +55,8 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Install dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Install production dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-dev
 
       - name: Build PHAR from source
         run: php --define phar.readonly=0 buildPhar.php
