@@ -56,13 +56,7 @@ jobs:
       - name: Fetch CHANGELOG from caller repo (Contents API, no full checkout)
         env:
           GH_TOKEN: ${{ github.token }}
-          CHANGELOG_FILE: ${{ inputs.changelog-file }}
-        run: |
-          set -euo pipefail
-          gh api "repos/${GITHUB_REPOSITORY}/contents/${CHANGELOG_FILE}?ref=${GITHUB_SHA}" \
-            --jq '.content' | base64 -d > "${RUNNER_TEMP}/CHANGELOG.md"
-          test -s "${RUNNER_TEMP}/CHANGELOG.md"
-          echo "Fetched $(wc -l < "${RUNNER_TEMP}/CHANGELOG.md") lines from ${CHANGELOG_FILE}@${GITHUB_SHA}"
+        run: bash "${EXTRACTOR_PATH}/.github/scripts/fetch-changelog.sh" "${{ inputs.changelog-file }}" "${RUNNER_TEMP}/CHANGELOG.md"
 
       - name: Generate App token (scope ${{ env.CHANGELOG_PAGE }} only)
         id: app-token
@@ -91,11 +85,7 @@ jobs:
       - name: Download PHAR and extract changelog into system context
         env:
           SYSTEM_NAME: ${{ inputs.system-name }}
-        run: |
-          bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" \
-            "${SYSTEM_NAME}" \
-            "${CHANGELOG_PAGE}" \
-            "${RUNNER_TEMP}/CHANGELOG.md"
+        run: bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" "${SYSTEM_NAME}" "${CHANGELOG_PAGE}" "${RUNNER_TEMP}/CHANGELOG.md"
 
       - name: Derive PR branch name (sanitize ref)
         id: branch
