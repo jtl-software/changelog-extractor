@@ -1,0 +1,122 @@
+# Reusable workflow (workflow_call) — consumed by connector repos on release.
+# Fetches the caller's CHANGELOG via the Contents API (no full checkout),
+# generates a scoped app token for jtl-software/changelog-page, runs the
+# extractor PHAR (downloaded from the v2 release asset), and opens an
+# auto-merge squash PR in changelog-page. Consumers pin to @v2 (rolling tag).
+name: update-changelog
+
+on:
+  workflow_call:
+    inputs:
+      system-name:
+        description: 'System name (maps to changelog-page/storage/systems/<system-name>.json)'
+        required: true
+        type: string
+      changelog-file:
+        description: 'Path to the changelog markdown file in the caller repo'
+        required: false
+        default: 'CHANGELOG.md'
+        type: string
+      app-id:
+        description: 'GitHub App ID for jtl-release-bot (public identifier, not a secret)'
+        required: true
+        type: string
+    secrets:
+      APP_PRIVATE_KEY:
+        description: 'Private key of the jtl-release-bot GitHub App'
+        required: true
+
+jobs:
+  update-changelog:
+    name: Update target repo
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      EXTRACTOR_PATH: _extractor
+      # Target repo name and local checkout path (kept identical by convention).
+      CHANGELOG_PAGE: changelog-page
+    steps:
+      - name: Derive reusable workflow ref
+        id: workflow-ref
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          echo "ref=${WORKFLOW_REF#*@}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout own scripts (sparse, at current workflow ref)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: jtl-software/changelog-extractor
+          ref: ${{ steps.workflow-ref.outputs.ref }}
+          path: ${{ env.EXTRACTOR_PATH }}
+          sparse-checkout: .github/scripts
+
+      - name: Fetch CHANGELOG from caller repo (Contents API, no full checkout)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash "${EXTRACTOR_PATH}/.github/scripts/fetch-changelog.sh" "${{ inputs.changelog-file }}" "${RUNNER_TEMP}/CHANGELOG.md"
+
+      - name: Generate App token (scope ${{ env.CHANGELOG_PAGE }} only)
+        id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3
+        with:
+          app-id: ${{ inputs.app-id }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: jtl-software
+          repositories: ${{ env.CHANGELOG_PAGE }}
+
+      - name: Checkout ${{ env.CHANGELOG_PAGE }} (only storage/systems)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          repository: jtl-software/${{ env.CHANGELOG_PAGE }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: ${{ env.CHANGELOG_PAGE }}
+          sparse-checkout: storage/systems
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          coverage: none
+
+      - name: Download PHAR and extract changelog into system context
+        env:
+          SYSTEM_NAME: ${{ inputs.system-name }}
+        run: bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" "${SYSTEM_NAME}" "${CHANGELOG_PAGE}" "${RUNNER_TEMP}/CHANGELOG.md"
+
+      - name: Derive PR branch name (sanitize ref)
+        id: branch
+        env:
+          CALLER_REF: ${{ github.ref_name }}
+          CALLER_REPO: ${{ github.event.repository.name }}
+        run: |
+          SAFE_REF="$(echo "${CALLER_REF}" | tr '/' '-' | tr -cd '[:alnum:]._-')"
+          echo "name=merge/${CALLER_REPO}-${SAFE_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request in ${{ env.CHANGELOG_PAGE }}
+        id: cpr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          path: ${{ env.CHANGELOG_PAGE }}
+          token: ${{ steps.app-token.outputs.token }}
+          branch: ${{ steps.branch.outputs.name }}
+          delete-branch: true
+          commit-message: "chore(changelog): update ${{ inputs.system-name }} from ${{ github.event.repository.name }}@${{ github.ref_name }}"
+          title: "chore(changelog): update ${{ inputs.system-name }} from ${{ github.event.repository.name }}@${{ github.ref_name }}"
+          body: |
+            Automated changelog update PR.
+
+            - Source: `${{ github.event.repository.name }}` @ `${{ github.ref_name }}`
+            - System: `${{ inputs.system-name }}`
+            - Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Enable auto-merge (squash) on the PR
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: jtl-software/${{ env.CHANGELOG_PAGE }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge --auto --squash "${PR_NUMBER}"

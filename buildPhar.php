@@ -2,7 +2,7 @@
 
 
 try {
-    $pharFile = 'extractor.phar';
+    $pharFile = 'changelog-extractor.phar';
 
     // clean up
     if (file_exists($pharFile)) {
@@ -40,6 +40,7 @@ try {
     chmod(__DIR__ . '/'     . $pharFile, 0770);
 
     echo "$pharFile successfully created" . PHP_EOL;
-} catch (Exception $e) {
-    echo $e->getMessage();
+} catch (Throwable $e) {
+    fwrite(STDERR, $e->getMessage() . PHP_EOL);
+    exit(1);
 }

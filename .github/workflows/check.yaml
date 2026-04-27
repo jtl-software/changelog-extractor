@@ -1,0 +1,68 @@
+# Runs PHPCS (ConnectorStandard), PHPStan (level 5, non-blocking), PHAR fixture
+# self-test, and the missing-context negative test on every push to the default
+# branch and on every pull request.
+name: check
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  code-quality:
+    name: Code Quality (PHPCS + PHPStan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run PHPCS (ConnectorStandard via phpcs.xml.dist)
+        run: vendor/bin/phpcs
+
+      # PHPStan matches the GitLab code-quality template's default
+      # (ENABLE_PHPSTAN=false there, i.e. PHPStan never ran). We run it
+      # here as an informational layer but keep it non-blocking so the
+      # migration preserves legacy behaviour. Failures show up in the
+      # step log and as a grey "failed (continue-on-error)" marker on
+      # the PR, but don't gate the merge.
+      - name: Run PHPStan (informational, non-blocking)
+        continue-on-error: true
+        run: vendor/bin/phpstan analyse --level=5 src/
+
+  action-self-test:
+    name: PHAR Fixture Self-Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
+        with:
+          php-version: '8.3'
+          extensions: json
+          tools: composer:v2
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-dev
+
+      - name: Build PHAR from source
+        run: php --define phar.readonly=0 buildPhar.php
+
+      - name: Run fixture test (prepare, extract, verify)
+        run: bash .github/scripts/verify-fixture.sh changelog-extractor.phar workspace
+
+      - name: Missing context must hard-fail
+        run: bash .github/scripts/verify-missing-context-fails.sh changelog-extractor.phar workspace

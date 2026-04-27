@@ -1,0 +1,5 @@
+{
+    "name": "fixture",
+    "label": "Fixture System",
+    "description": "Test context for the fixture self-test"
+}
