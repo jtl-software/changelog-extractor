@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Setup PHP 8.3
         uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2
@@ -53,13 +55,16 @@ jobs:
 
       - name: Update rolling v2 git tag
         if: startsWith(github.ref_name, 'v2')
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          SHA="${GITHUB_SHA}"
-          echo "Updating rolling v2 tag to point at ${SHA} (from tag ${GITHUB_REF_NAME})"
-          git tag -f v2 "${SHA}"
-          git push --force origin refs/tags/v2
+          echo "Updating rolling v2 tag to point at ${GITHUB_SHA} (from tag ${GITHUB_REF_NAME})"
+          gh api --method PATCH "repos/${{ github.repository }}/git/refs/tags/v2" \
+            -f sha="${GITHUB_SHA}" \
+            -F force=true \
+          || gh api --method POST "repos/${{ github.repository }}/git/refs" \
+            -f ref="refs/tags/v2" \
+            -f sha="${GITHUB_SHA}"
 
       # The reusable workflow downloads the PHAR from
       # https://github.com/jtl-software/changelog-extractor/releases/download/v2/changelog-extractor.phar

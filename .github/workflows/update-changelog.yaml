@@ -48,6 +48,7 @@ jobs:
       - name: Checkout own scripts (sparse, at current workflow ref)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          persist-credentials: false
           repository: jtl-software/changelog-extractor
           ref: ${{ steps.workflow-ref.outputs.ref }}
           path: ${{ env.EXTRACTOR_PATH }}
@@ -70,6 +71,7 @@ jobs:
       - name: Checkout ${{ env.CHANGELOG_PAGE }} (only storage/systems)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          persist-credentials: false
           repository: jtl-software/${{ env.CHANGELOG_PAGE }}
           token: ${{ steps.app-token.outputs.token }}
           path: ${{ env.CHANGELOG_PAGE }}
