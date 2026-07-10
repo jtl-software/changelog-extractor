@@ -116,6 +116,68 @@ If both Atlassian secrets are present, the workflow additionally publishes the l
 The generated app token is restricted to `repositories: [changelog-page]`
 (E3.2). The caller repo does not need any token access to `changelog-page`.
 
+### Required setup checklist (GitHub + Jira)
+
+Use this checklist to make the complete feature work end-to-end (changelog-page + Jira Releases):
+
+1. Configure GitHub App credentials (required for `changelog-page` update)
+   - `GH_APP_ID` (Variable): Public App ID of `jtl-release-bot`.
+   - `GH_APP_PRIVATE_KEY` (Secret): Private key of `jtl-release-bot`.
+   - Where to set:
+     - Preferred: org-level (`jtl-software`) variables/secrets with repository access for all connector repos.
+     - Alternative: per-repo variables/secrets.
+   - Purpose:
+     - Generate a scoped installation token to create/update PRs in `jtl-software/changelog-page`.
+
+2. Configure Atlassian credentials (required for Jira release publishing)
+   - `ATLASSIAN_EMAIL` (Secret): Atlassian account email used for API auth.
+   - `ATLASSIAN_API_TOKEN` (Secret): API token created in Atlassian account security settings.
+   - Where to set:
+     - Preferred: org-level secrets in GitHub, shared with all connector repos.
+     - Alternative: per-repo secrets.
+   - Purpose:
+     - Create/update Jira Versions and assign `fixVersions` on detected tickets.
+
+3. Configure repo-specific mapping values
+   - `system-name` (workflow input): must match `changelog-page/storage/systems/<system-name>.json`.
+   - `jira-release-prefix` (workflow input): release name prefix used in Jira.
+   - Current prefix mapping:
+     - Shopify: `SFC`
+     - Shopware6 SaaS: `SW6`
+     - WooCommerce: `WC`
+     - Core: `Core`
+     - Prestashop: `PRC`
+   - Core only:
+     - Set repo variable `CHANGELOG_SYSTEM_NAME` to the exact system key existing in `changelog-page`.
+
+4. Ensure Jira permissions for the Atlassian bot user
+   - Project permissions on `CO`:
+     - Browse Projects
+     - Manage Versions
+     - Edit Issues
+   - Field permissions:
+     - Must be allowed to modify `Fix Versions` on target issue types.
+   - Why:
+     - Missing permissions cause partial updates (version created but issues not linked, or vice versa).
+
+5. Keep release trigger and workflow reference consistent
+   - Consumer workflows must run on `release: published`.
+   - After feature-branch validation, pin reusable workflow ref back to stable (`@v2` or commit SHA on default branch).
+   - Why:
+     - Avoid production dependency on temporary feature branches.
+
+6. Validate after setup
+   - Release a test version in one connector repo.
+   - Confirm all of the following:
+     - A PR is created in `jtl-software/changelog-page`.
+     - The latest version appears in `storage/systems/<system>.json`.
+     - Jira Version `<PREFIX>-<version>` exists in project `CO`.
+     - Included tickets are linked via `fixVersions`.
+
+Notes:
+- Atlassian publishing is intentionally warn-only by default. Missing/invalid Atlassian credentials do not block connector releases.
+- If `jira-release-prefix` is not set and no known prefix mapping exists, Jira publishing is skipped with a warning.
+
 ## Release process
 
 Releases are automated via `.github/workflows/release.yaml` when a `v*` tag
