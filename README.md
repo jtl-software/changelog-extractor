@@ -17,7 +17,7 @@ Every release published by a consumer repo (e.g. `connector-shopify`) should
 automatically produce a structured changelog entry in the central
 `changelog-page`. The extractor parses the consumer's `CHANGELOG.md`, merges
 the result into the system context file
-(`changelog-page/storage/systems/<system-name>.json`), opens a pull request,
+(`changelog-page/storage/systems/<project>.json`), opens a pull request,
 and lets auto-merge finish the job.
 
 ## Architecture decisions
@@ -139,7 +139,7 @@ Use this checklist to make the complete feature work end-to-end (changelog-page 
      - Create/update Jira Versions and assign `fixVersions` on detected tickets.
 
 3. Configure repo-specific mapping values
-   - `system-name` (workflow input): must match `changelog-page/storage/systems/<system-name>.json`.
+  - `system-name` (workflow input): must match `changelog-page/storage/systems/<project>.json`.
    - `jira-release-prefix` (workflow input): release name prefix used in Jira.
    - Current prefix mapping:
      - Shopify: `SFC`
@@ -169,7 +169,7 @@ Use this checklist to make the complete feature work end-to-end (changelog-page 
 6. Validate after setup
    - Release a test version in one connector repo.
    - Confirm all of the following:
-     - A PR is created in `jtl-software/changelog-page`.
+    - A PR is created in `jtl-software/changelog-page` for `<project>` based on the source file `CHANGELOG.md` (or custom `changelog-file`).
      - The latest version appears in `storage/systems/<system>.json`.
      - Jira Version `<PREFIX>-<version>` exists in project `CO`.
      - Included tickets are linked via `fixVersions`.
@@ -243,12 +243,12 @@ CLI options:
 ## Onboarding new systems
 
 The workflow hard-fails when
-`changelog-page/storage/systems/<system-name>.json` does not exist (E2.3).
+`changelog-page/storage/systems/<project>.json` does not exist (E2.3).
 To add a new system:
 
 1. Create a branch in
    [`jtl-software/changelog-page`](https://github.com/jtl-software/changelog-page).
-2. Create `storage/systems/<system-name>.json`, minimal shape:
+2. Create `storage/systems/<project>.json`, minimal shape:
    ```json
    {
      "name": "<system-name>",
@@ -259,7 +259,7 @@ To add a new system:
    (`changelog` is filled in by the extractor later; do not add it by
    hand.)
 3. Merge the PR.
-4. Invoke the reusable workflow from the consumer repo (see above). On the
+4. Ensure the consumer repo keeps release notes in `CHANGELOG.md` (or set `changelog-file` accordingly), then invoke the reusable workflow (see above). On the
    next release the file is automatically extended with the `changelog`
    key.
 
