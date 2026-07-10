@@ -16,17 +16,23 @@ This repo ships two things:
 Every release published by a consumer repo (e.g. `connector-shopify`) should
 automatically produce a structured changelog entry in the central
 `jtl-software/changelog-page` repository. The extractor parses the consumer's
-`CHANGELOG.md`, merges the result into the system context file
-(`storage/systems/<project>.json` inside `jtl-software/changelog-page`), opens
+`CHANGELOG.md` (for example `jtl-software/<project>/CHANGELOG.md`), merges the
+result into the system context file
+(`storage/systems/<system-key>.json` inside `jtl-software/changelog-page`), opens
 a pull request, and lets auto-merge finish the job.
 
-`<project>` means the exact value of workflow input `system-name` and the
-exact JSON filename in `jtl-software/changelog-page/storage/systems/`.
+Terms used in this README:
+
+- `<project>`: Source repository name in `jtl-software/<project>` (for example
+  `shopify` in `jtl-software/shopify`).
+- `<system-key>`: Value of workflow input `system-name` and exact JSON filename
+  in `jtl-software/changelog-page/storage/systems/`.
 
 Example:
 
+- source changelog: `jtl-software/connector-shopify/CHANGELOG.md`
 - `system-name: shopify`
-- target file: `jtl-software/changelog-page/storage/systems/shopify.json`
+- target context: `jtl-software/changelog-page/storage/systems/shopify.json`
 
 ## Architecture decisions
 
@@ -60,7 +66,7 @@ This gives us:
 
 ### E2.3 Hard fail on missing context file
 
-If `storage/systems/<project>.json` does not exist in
+If `storage/systems/<system-key>.json` does not exist in
 `jtl-software/changelog-page`, the workflow aborts with a clear error message.
 This matches the GitLab behaviour. New systems have to be created manually in
 `jtl-software/changelog-page` first (see "Onboarding new systems").
@@ -105,7 +111,7 @@ jobs:
 
 | Input | Required | Default | Description |
 | --- | --- | --- | --- |
-| `system-name` | yes | — | System name (see above) |
+| `system-name` | yes | — | System key for target file `storage/systems/<system-key>.json` in `jtl-software/changelog-page` |
 | `changelog-file` | no | `CHANGELOG.md` | Path to the changelog file |
 | `app-id` | yes | — | App ID of the `jtl-release-bot` GitHub App. Public identifier, not a secret. Primary: org variable `GH_APP_ID`. Fallback: `JTL_RELEASE_BOT_APP_ID` |
 | `atlassian-site` | no | `https://jtl-software.atlassian.net` | Atlassian base URL for Jira API calls |
@@ -123,8 +129,10 @@ jobs:
 If both Atlassian secrets are present, the workflow additionally publishes the latest extracted release to Jira Versions and links detected tickets via `fixVersions`. This step is **warn-only** and does not fail the release pipeline.
 
 The generated app token is restricted to `repositories: [changelog-page]`
-(E3.2). This means access only to repo `jtl-software/changelog-page`.
-The caller repo does not need any token access to `jtl-software/changelog-page`.
+(E3.2). This scope is only for the target context repository
+`jtl-software/changelog-page`.
+The source repository `jtl-software/<project>` (where `CHANGELOG.md` lives) is
+read via `github.token` and is not part of this app-token scope.
 
 ### Required setup checklist (GitHub + Jira)
 
@@ -151,7 +159,7 @@ Use this checklist to make the complete feature work end-to-end
 
 3. Configure repo-specific mapping values
    - `system-name` (workflow input): must match filename
-     `storage/systems/<project>.json` in `jtl-software/changelog-page`.
+  `storage/systems/<system-key>.json` in `jtl-software/changelog-page`.
    - `jira-release-prefix` (workflow input): release name prefix used in Jira.
    - Current prefix mapping:
      - Shopify: `SFC`
@@ -182,9 +190,9 @@ Use this checklist to make the complete feature work end-to-end
 6. Validate after setup
    - Release a test version in one connector repo.
    - Confirm all of the following:
-     - A PR is created in `jtl-software/changelog-page` for `<project>`
+     - A PR is created in `jtl-software/changelog-page` for `<system-key>`
        based on source file `CHANGELOG.md` (or custom `changelog-file`).
-    - The latest version appears in `storage/systems/<project>.json`.
+     - The latest version appears in `storage/systems/<system-key>.json`.
      - Jira Version `<PREFIX>-<version>` exists in project `CO`.
      - Included tickets are linked via `fixVersions`.
 
@@ -257,16 +265,16 @@ CLI options:
 ## Onboarding new systems
 
 The workflow hard-fails when
-`storage/systems/<project>.json` does not exist in
+`storage/systems/<system-key>.json` does not exist in
 `jtl-software/changelog-page` (E2.3).
 To add a new system:
 
 1. Create a branch in
    [`jtl-software/changelog-page`](https://github.com/jtl-software/changelog-page).
-2. Create `storage/systems/<project>.json`, minimal shape:
+2. Create `storage/systems/<system-key>.json`, minimal shape:
    ```json
    {
-     "name": "<project>",
+     "name": "<system-key>",
      "label": "<Display name>",
      "description": "<Short description of the system>"
    }
