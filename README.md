@@ -83,10 +83,13 @@ jobs:
     uses: jtl-software/changelog-extractor/.github/workflows/update-changelog.yaml@v2
     with:
       system-name: shopify
+      jira-release-prefix: SFC
       app-id: ${{ vars.GH_APP_ID }}
       # changelog-file: CHANGELOG.md  # optional, default
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+      ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+      ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
 ```
 
 ### Inputs
@@ -96,12 +99,19 @@ jobs:
 | `system-name` | yes | — | System name (see above) |
 | `changelog-file` | no | `CHANGELOG.md` | Path to the changelog file |
 | `app-id` | yes | — | App ID of the `jtl-release-bot` GitHub App. Public identifier, not a secret. Primary: org variable `GH_APP_ID`. Fallback: `JTL_RELEASE_BOT_APP_ID` |
+| `atlassian-site` | no | `https://jtl-software.atlassian.net` | Atlassian base URL for Jira API calls |
+| `jira-project-key` | no | `CO` | Jira project key where release versions are created/updated |
+| `jira-release-prefix` | no | (derived from `system-name`) | Optional Jira release prefix override (for example `SFC`, `SW6`, `WC`, `Core`) |
 
 ### Secrets
 
 | Secret | Description |
 | --- | --- |
 | `APP_PRIVATE_KEY` | Private key of the app. Primary: org secret `GH_APP_PRIVATE_KEY`. Fallback: `JTL_RELEASE_BOT_PRIVATE_KEY` |
+| `ATLASSIAN_EMAIL` | Atlassian account email for Jira API auth (optional) |
+| `ATLASSIAN_API_TOKEN` | Atlassian API token for Jira API auth (optional) |
+
+If both Atlassian secrets are present, the workflow additionally publishes the latest extracted release to Jira Versions and links detected tickets via `fixVersions`. This step is **warn-only** and does not fail the release pipeline.
 
 The generated app token is restricted to `repositories: [changelog-page]`
 (E3.2). The caller repo does not need any token access to `changelog-page`.

@@ -21,10 +21,31 @@ on:
         description: 'GitHub App ID for jtl-release-bot (public identifier, not a secret)'
         required: true
         type: string
+      atlassian-site:
+        description: 'Atlassian base URL (for example https://jtl-software.atlassian.net)'
+        required: false
+        default: 'https://jtl-software.atlassian.net'
+        type: string
+      jira-project-key:
+        description: 'Jira project key for release versions'
+        required: false
+        default: 'CO'
+        type: string
+      jira-release-prefix:
+        description: 'Optional Jira release prefix override (for example SFC, SW6, WC, Core)'
+        required: false
+        default: ''
+        type: string
     secrets:
       APP_PRIVATE_KEY:
         description: 'Private key of the jtl-release-bot GitHub App'
         required: true
+      ATLASSIAN_EMAIL:
+        description: 'Atlassian account email used for API auth'
+        required: false
+      ATLASSIAN_API_TOKEN:
+        description: 'Atlassian API token used for API auth'
+        required: false
 
 jobs:
   update-changelog:
@@ -88,6 +109,19 @@ jobs:
         env:
           SYSTEM_NAME: ${{ inputs.system-name }}
         run: bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" "${SYSTEM_NAME}" "${CHANGELOG_PAGE}" "${RUNNER_TEMP}/CHANGELOG.md"
+
+      - name: Publish release/version to Atlassian Jira (warn-only)
+        if: ${{ secrets.ATLASSIAN_EMAIL != '' && secrets.ATLASSIAN_API_TOKEN != '' }}
+        continue-on-error: true
+        env:
+          SYSTEM_NAME: ${{ inputs.system-name }}
+          JIRA_SITE: ${{ inputs.atlassian-site }}
+          JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
+          JIRA_RELEASE_PREFIX: ${{ inputs.jira-release-prefix }}
+          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+          ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
+          CONTEXT_FILE: ${{ env.CHANGELOG_PAGE }}/storage/systems/${{ inputs.system-name }}.json
+        run: bash "${EXTRACTOR_PATH}/.github/scripts/publish-atlassian-release.sh"
 
       - name: Derive PR branch name (sanitize ref)
         id: branch
