@@ -57,6 +57,10 @@ jobs:
       EXTRACTOR_PATH: _extractor
       # Target repo name and local checkout path (kept identical by convention).
       CHANGELOG_PAGE: changelog-page
+      # Secrets cannot be referenced directly in `if:` conditionals; mirror them
+      # into job-level env vars so the step below can gate on env instead.
+      ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
+      ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
     steps:
       - name: Derive reusable workflow ref
         id: workflow-ref
@@ -111,15 +115,13 @@ jobs:
         run: bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" "${SYSTEM_NAME}" "${CHANGELOG_PAGE}" "${RUNNER_TEMP}/CHANGELOG.md"
 
       - name: Publish release/version to Atlassian Jira (warn-only)
-        if: ${{ secrets.ATLASSIAN_EMAIL != '' && secrets.ATLASSIAN_API_TOKEN != '' }}
+        if: ${{ env.ATLASSIAN_EMAIL != '' && env.ATLASSIAN_API_TOKEN != '' }}
         continue-on-error: true
         env:
           SYSTEM_NAME: ${{ inputs.system-name }}
           JIRA_SITE: ${{ inputs.atlassian-site }}
           JIRA_PROJECT_KEY: ${{ inputs.jira-project-key }}
           JIRA_RELEASE_PREFIX: ${{ inputs.jira-release-prefix }}
-          ATLASSIAN_EMAIL: ${{ secrets.ATLASSIAN_EMAIL }}
-          ATLASSIAN_API_TOKEN: ${{ secrets.ATLASSIAN_API_TOKEN }}
           CONTEXT_FILE: ${{ env.CHANGELOG_PAGE }}/storage/systems/${{ inputs.system-name }}.json
         run: bash "${EXTRACTOR_PATH}/.github/scripts/publish-atlassian-release.sh"
 
