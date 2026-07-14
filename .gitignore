@@ -3,3 +3,6 @@
 .DS_Store
 vendor
 changelog-extractor.phar
+.phpunit.cache
+phpunit.xml
+.phpunit.result.cache

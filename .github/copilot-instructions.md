@@ -20,6 +20,9 @@ vendor/bin/phpcs
 # Run PHPStan (informational, non-blocking)
 vendor/bin/phpstan analyse --level=5 src/
 
+# Run PHPUnit (structure prepared under tests/Unit; empty until tests are added)
+vendor/bin/phpunit
+
 # Build PHAR locally (requires phar.readonly=0)
 php --define phar.readonly=0 buildPhar.php
 
@@ -48,13 +51,15 @@ src/
     CommonParser.php   Core logic: walks the league/commonmark AST, extracts versions/changes
 bin/changelog-extractor  Thin shell wrapper
 buildPhar.php          Bundles vendor/ + src/ + extractor.php into changelog-extractor.phar
-tests/fixtures/        CHANGELOG.md + context.json + expected.json (human reference, not a golden file)
+tests/
+  Unit/                PHPUnit test suite (structure prepared, currently empty)
+  fixtures/            CHANGELOG.md + context.json + expected.json (human reference, not a golden file)
+phpunit.xml.dist       PHPUnit config, testsuite = tests/Unit
 .github/
   workflows/
-    check.yaml         CI: PHPCS + PHPStan + fixture self-test + negative test
+    check.yaml         CI: actionlint + PHPCS + PHPStan + PHPUnit + fixture self-test + negative test
     release.yaml       Tag push → build PHAR → GitHub Release + update rolling v2 tag/release
     update-changelog.yaml  The reusable workflow consumed by connector repos
-    lint-actions.yaml  actionlint on workflow files
   scripts/
     verify-fixture.sh          Runs PHAR against fixtures, asserts structure via jq
     verify-missing-context-fails.sh  Asserts non-zero exit when --context file is absent

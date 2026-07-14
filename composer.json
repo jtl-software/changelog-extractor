@@ -19,12 +19,18 @@
       "Jtl\\Changelog\\Extractor\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Jtl\\Changelog\\Extractor\\Tests\\": "tests/Unit/"
+    }
+  },
   "require-dev": {
     "symfony/var-dumper": "^5.4",
     "squizlabs/php_codesniffer": "^3.7",
     "slevomat/coding-standard": "^8.0",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "phpstan/phpstan": "^1.10"
+    "phpstan/phpstan": "^1.10",
+    "phpunit/phpunit": "^11.0"
   },
   "config": {
     "allow-plugins": {

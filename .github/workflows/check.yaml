@@ -1,17 +1,48 @@
-# Runs PHPCS (ConnectorStandard), PHPStan (level 5, non-blocking), PHAR fixture
-# self-test, and the missing-context negative test on every push to the default
-# branch and on every pull request.
+# Runs actionlint, PHPCS (ConnectorStandard), PHPStan (level 5, non-blocking),
+# PHPUnit, PHAR fixture self-test, and the missing-context negative test on
+# every push to the default branch and on every pull request.
 name: check
 
 on:
+  workflow_call:
   push:
     branches: [main, master]
   pull_request:
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 jobs:
+  lint:
+    name: Lint GitHub Actions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github
+
+      - name: Lint GitHub Actions
+        uses: reviewdog/action-actionlint@6fb7acc99f4a1008869fa8a0f09cfca740837d9d # v1.72.0
+        with:
+          reporter: ${{ github.event_name == 'pull_request' && 'github-pr-review' || 'github-check' }}
+          fail_level: error
+
   code-quality:
     name: Code Quality (PHPCS + PHPStan)
     runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      checks: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -25,6 +56,17 @@ jobs:
           extensions: json
           tools: composer:v2
           coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache-dir
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ${{ steps.composer-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-composer-php8.3-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-php8.3-
 
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
@@ -45,6 +87,10 @@ jobs:
   action-self-test:
     name: PHAR Fixture Self-Test
     runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      checks: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -59,6 +105,17 @@ jobs:
           tools: composer:v2
           coverage: none
 
+      - name: Get Composer cache directory
+        id: composer-cache-dir
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ${{ steps.composer-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-composer-php8.3-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-php8.3-
+
       - name: Install production dependencies
         run: composer install --no-interaction --no-progress --prefer-dist --no-dev
 
@@ -70,3 +127,68 @@ jobs:
 
       - name: Missing context must hard-fail
         run: bash .github/scripts/verify-missing-context-fails.sh changelog-extractor.phar workspace
+
+  php-tests:
+    name: PHP Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2.37.0
+        with:
+          php-version: '8.3'
+          extensions: json
+          tools: composer:v2
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache-dir
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ${{ steps.composer-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-composer-php8.3-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-php8.3-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: PHPUnit
+        run: vendor/bin/phpunit --log-junit phpunit.xml
+
+      - name: Report test results
+        if: always()
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
+        with:
+          name: PHPUnit Results
+          path: phpunit.xml
+          reporter: java-junit
+
+  check:
+    name: Check status
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [lint, code-quality, action-self-test, php-tests]
+    permissions:
+      checks: write
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.code-quality.result }}" != "success" ]] || \
+             [[ "${{ needs.action-self-test.result }}" != "success" ]] || \
+             [[ "${{ needs.php-tests.result }}" != "success" ]]; then
+            echo "❌ One or more checks failed"
+            exit 1
+          fi
+          echo "✅ All checks passed"
