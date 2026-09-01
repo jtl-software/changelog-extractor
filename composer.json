@@ -2,6 +2,7 @@
   "name": "jtl/changelog-extractor",
   "authors": [
     {
+      "name": "Tim Platzke",
       "homepage": "https://jtl-software.com",
       "role": "Developer"
     }
