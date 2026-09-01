@@ -8,6 +8,11 @@ on:
     branches: [main, master]
   pull_request:
 
+# Minimal token permissions for all jobs (CodeQL actions/missing-workflow-permissions).
+# Both jobs only read the repo (checkout + build/test); none need write access.
+permissions:
+  contents: read
+
 jobs:
   code-quality:
     name: Code Quality (PHPCS + PHPStan)
