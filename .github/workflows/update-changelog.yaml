@@ -1,8 +1,9 @@
-# Reusable workflow (workflow_call) — consumed by connector repos on release.
+# Reusable workflow (workflow_call) — consumed by connector repos on tag push.
 # Fetches the caller's CHANGELOG via the Contents API (no full checkout),
-# generates a scoped app token for jtl-software/changelog-page, runs the
-# extractor PHAR (downloaded from the v2 release asset), and opens an
-# auto-merge squash PR in changelog-page. Consumers pin to @v2 (rolling tag).
+# generates a scoped app token for jtl-software/changelog-page +
+# jtl-software/changelog-extractor, downloads the extractor PHAR (authenticated,
+# from the v2 release asset of the internal repo), and opens an auto-merge squash
+# PR in changelog-page. Consumers pin to a v2.x.y ref (or @v2 rolling).
 name: update-changelog
 
 on:
@@ -17,11 +18,10 @@ on:
         required: false
         default: 'CHANGELOG.md'
         type: string
-      app-id:
-        description: 'GitHub App ID for jtl-release-bot (public identifier, not a secret)'
-        required: true
-        type: string
     secrets:
+      APP_ID:
+        description: 'App ID of jtl-release-bot (passed as a secret because it is stored as an org secret)'
+        required: true
       APP_PRIVATE_KEY:
         description: 'Private key of the jtl-release-bot GitHub App'
         required: true
@@ -34,6 +34,7 @@ jobs:
       contents: read
     env:
       EXTRACTOR_PATH: _extractor
+      EXTRACTOR_REPO: jtl-software/changelog-extractor
       # Target repo name and local checkout path (kept identical by convention).
       CHANGELOG_PAGE: changelog-page
     steps:
@@ -45,28 +46,35 @@ jobs:
           set -euo pipefail
           echo "ref=${WORKFLOW_REF#*@}" >> "$GITHUB_OUTPUT"
 
+      # Generated first: the token is scoped to BOTH repos and is used for the
+      # internal scripts checkout, the authenticated PHAR download, and the
+      # changelog-page PR. app-id comes from a secret because the org stores it
+      # under Secrets (not Variables).
+      - name: Generate App token (changelog-page + changelog-extractor)
+        id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: jtl-software
+          repositories: |
+            changelog-page
+            changelog-extractor
+
       - name: Checkout own scripts (sparse, at current workflow ref)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-          repository: jtl-software/changelog-extractor
+          repository: ${{ env.EXTRACTOR_REPO }}
           ref: ${{ steps.workflow-ref.outputs.ref }}
           path: ${{ env.EXTRACTOR_PATH }}
           sparse-checkout: .github/scripts
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Fetch CHANGELOG from caller repo (Contents API, no full checkout)
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash "${EXTRACTOR_PATH}/.github/scripts/fetch-changelog.sh" "${{ inputs.changelog-file }}" "${RUNNER_TEMP}/CHANGELOG.md"
-
-      - name: Generate App token (scope ${{ env.CHANGELOG_PAGE }} only)
-        id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
-        with:
-          app-id: ${{ inputs.app-id }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: jtl-software
-          repositories: ${{ env.CHANGELOG_PAGE }}
 
       - name: Checkout ${{ env.CHANGELOG_PAGE }} (only storage/systems)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -87,6 +95,8 @@ jobs:
       - name: Download PHAR and extract changelog into system context
         env:
           SYSTEM_NAME: ${{ inputs.system-name }}
+          EXTRACTOR_TOKEN: ${{ steps.app-token.outputs.token }}
+          EXTRACTOR_REPO: ${{ env.EXTRACTOR_REPO }}
         run: bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" "${SYSTEM_NAME}" "${CHANGELOG_PAGE}" "${RUNNER_TEMP}/CHANGELOG.md"
 
       - name: Derive PR branch name (sanitize ref)

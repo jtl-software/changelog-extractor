@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Downloads the v2 PHAR and runs it against an existing context file in
-# the locally checked-out target-repo tree. Merge-in-place semantics:
-# the context JSON at storage/systems/<system-name>.json gets its
-# `changelog` key overwritten with the parsed CHANGELOG.md content.
+# Downloads the v2 PHAR (authenticated) and runs it against an existing context
+# file in the locally checked-out target-repo tree. Merge-in-place semantics:
+# the context JSON at storage/systems/<system-name>.json gets its `changelog`
+# key overwritten with the parsed CHANGELOG.md content.
 #
 # Usage:
 #   run-extractor.sh <system-name> <target-repo-dir> <changelog-file>
@@ -11,8 +11,12 @@
 # Example:
 #   run-extractor.sh shopify changelog-page /tmp/CHANGELOG.md
 #
-# Fails (non-zero exit) if the target context file doesn't exist or if
-# any command fails.
+# Required environment variables:
+#   EXTRACTOR_TOKEN  Token with contents:read on the extractor repo (App token).
+#   EXTRACTOR_REPO   owner/repo of the extractor (default: jtl-software/changelog-extractor).
+#
+# Fails (non-zero exit) if the target context file doesn't exist or if any
+# command fails.
 
 set -euo pipefail
 
@@ -24,6 +28,9 @@ fi
 SYSTEM_NAME="$1"
 TARGET_REPO_DIR="$2"
 CHANGELOG="$3"
+
+: "${EXTRACTOR_TOKEN:?EXTRACTOR_TOKEN must be set (App token with contents:read on the extractor repo)}"
+EXTRACTOR_REPO="${EXTRACTOR_REPO:-jtl-software/changelog-extractor}"
 
 # Reject system names that could escape storage/systems/ or contain shell
 # metacharacters. The allowed character set matches what changelog-page
@@ -40,14 +47,21 @@ if [ ! -f "${CONTEXT_FILE}" ]; then
   exit 1
 fi
 
-PHAR="$(mktemp)"
-SHA_FILE="$(mktemp)"
-trap 'rm -f "${PHAR}" "${SHA_FILE}"' EXIT
+DL_DIR="$(mktemp -d)"
+trap 'rm -rf "${DL_DIR}"' EXIT
 
-PHAR_URL="https://github.com/jtl-software/changelog-extractor/releases/download/v2/changelog-extractor.phar"
+# Authenticated asset download. `gh release download` resolves the asset IDs and
+# follows the signed-URL redirect correctly; a plain curl of the browser URL does
+# not work for a private/internal repo.
+GH_TOKEN="${EXTRACTOR_TOKEN}" gh release download v2 \
+  --repo "${EXTRACTOR_REPO}" \
+  --pattern 'changelog-extractor.phar' \
+  --pattern 'changelog-extractor.phar.sha256' \
+  --dir "${DL_DIR}" \
+  --clobber
 
-curl -fsSL -o "${PHAR}" "${PHAR_URL}"
-curl -fsSL -o "${SHA_FILE}" "${PHAR_URL}.sha256"
+PHAR="${DL_DIR}/changelog-extractor.phar"
+SHA_FILE="${DL_DIR}/changelog-extractor.phar.sha256"
 
 EXPECTED_SHA="$(awk '{print $1}' "${SHA_FILE}")"
 ACTUAL_SHA="$(sha256sum "${PHAR}" | awk '{print $1}')"
