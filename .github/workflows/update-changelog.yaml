@@ -52,7 +52,7 @@ jobs:
       # under Secrets (not Variables).
       - name: Generate App token (changelog-page + changelog-extractor)
         id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -62,7 +62,7 @@ jobs:
             changelog-extractor
 
       - name: Checkout own scripts (sparse, at current workflow ref)
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           repository: ${{ env.EXTRACTOR_REPO }}
@@ -80,7 +80,7 @@ jobs:
         run: bash "${EXTRACTOR_PATH}/.github/scripts/fetch-changelog.sh" "$CHANGELOG_FILE" "${RUNNER_TEMP}/CHANGELOG.md"
 
       - name: Checkout ${{ env.CHANGELOG_PAGE }} (only storage/systems)
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           repository: jtl-software/${{ env.CHANGELOG_PAGE }}
@@ -89,7 +89,7 @@ jobs:
           sparse-checkout: storage/systems
 
       - name: Setup PHP 8.3
-        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # v2.37.0
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
         with:
           php-version: '8.3'
           extensions: json
