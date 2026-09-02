@@ -12,7 +12,10 @@
 #   run-extractor.sh shopify changelog-page /tmp/CHANGELOG.md
 #
 # Required environment variables:
-#   EXTRACTOR_TOKEN  Token with contents:read on the extractor repo (App token).
+#   EXTRACTOR_TOKEN  Any valid GitHub token (e.g. the default GITHUB_TOKEN).
+#                    changelog-extractor is public, so no special scope is
+#                    needed; a token just avoids the unauthenticated API rate
+#                    limit.
 #   EXTRACTOR_REPO   owner/repo of the extractor (default: jtl-software/changelog-extractor).
 #
 # Fails (non-zero exit) if the target context file doesn't exist or if any
@@ -29,7 +32,7 @@ SYSTEM_NAME="$1"
 TARGET_REPO_DIR="$2"
 CHANGELOG="$3"
 
-: "${EXTRACTOR_TOKEN:?EXTRACTOR_TOKEN must be set (App token with contents:read on the extractor repo)}"
+: "${EXTRACTOR_TOKEN:?EXTRACTOR_TOKEN must be set (any valid token, e.g. GITHUB_TOKEN — changelog-extractor is public)}"
 EXTRACTOR_REPO="${EXTRACTOR_REPO:-jtl-software/changelog-extractor}"
 
 # Reject system names that could escape storage/systems/ or contain shell
@@ -50,9 +53,10 @@ fi
 DL_DIR="$(mktemp -d)"
 trap 'rm -rf "${DL_DIR}"' EXIT
 
-# Authenticated asset download. `gh release download` resolves the asset IDs and
-# follows the signed-URL redirect correctly; a plain curl of the browser URL does
-# not work for a private/internal repo.
+# changelog-extractor is public, so no special scope is needed here — any
+# valid token works (we still pass one to avoid the unauthenticated API rate
+# limit). `gh release download` resolves the asset IDs and follows the
+# signed-URL redirect correctly.
 GH_TOKEN="${EXTRACTOR_TOKEN}" gh release download v2 \
   --repo "${EXTRACTOR_REPO}" \
   --pattern 'changelog-extractor.phar' \
