@@ -40,10 +40,15 @@ jobs:
       # Target repo name and local checkout path (kept identical by convention).
       CHANGELOG_PAGE: changelog-page
     steps:
+      # github.workflow_ref is the CALLER's own triggering ref, not this
+      # reusable workflow's resolved ref - github.job_workflow_ref is the one
+      # that actually names the ref this job's own workflow file was pinned
+      # to. Using the wrong one here made the next step silently fetch
+      # whatever ref the caller happened to be on, from this (unrelated) repo.
       - name: Derive reusable workflow ref
         id: workflow-ref
         env:
-          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_REF: ${{ github.job_workflow_ref }}
         run: |
           set -euo pipefail
           echo "ref=${WORKFLOW_REF#*@}" >> "$GITHUB_OUTPUT"
