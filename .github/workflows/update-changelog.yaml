@@ -20,10 +20,10 @@ on:
         type: string
     secrets:
       APP_ID:
-        description: 'App ID of jtl-release-bot (passed as a secret because it is stored as an org secret)'
+        description: 'App ID of jtl-changelog-page-writer (passed as a secret because it is stored as an org secret)'
         required: true
       APP_PRIVATE_KEY:
-        description: 'Private key of the jtl-release-bot GitHub App'
+        description: 'Private key of the jtl-changelog-page-writer GitHub App'
         required: true
 
 jobs:

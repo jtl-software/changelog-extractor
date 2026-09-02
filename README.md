@@ -83,10 +83,10 @@ jobs:
     uses: jtl-software/changelog-extractor/.github/workflows/update-changelog.yaml@v2
     with:
       system-name: shopify
-      app-id: ${{ vars.GH_APP_ID }}
       # changelog-file: CHANGELOG.md  # optional, default
     secrets:
-      APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+      APP_ID: ${{ secrets.CHANGELOG_PAGE_APP_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.CHANGELOG_PAGE_APP_PRIVATE_KEY }}
 ```
 
 ### Inputs
@@ -95,13 +95,16 @@ jobs:
 | --- | --- | --- | --- |
 | `system-name` | yes | — | System name (see above) |
 | `changelog-file` | no | `CHANGELOG.md` | Path to the changelog file |
-| `app-id` | yes | — | App ID of the `jtl-release-bot` GitHub App. Public identifier, not a secret. Primary: org variable `GH_APP_ID`. Fallback: `JTL_RELEASE_BOT_APP_ID` |
 
 ### Secrets
 
 | Secret | Description |
 | --- | --- |
-| `APP_PRIVATE_KEY` | Private key of the app. Primary: org secret `GH_APP_PRIVATE_KEY`. Fallback: `JTL_RELEASE_BOT_PRIVATE_KEY` |
+| `APP_ID` | App ID of the `jtl-changelog-page-writer` GitHub App. Org secret `CHANGELOG_PAGE_APP_ID` |
+| `APP_PRIVATE_KEY` | Private key of the app. Org secret `CHANGELOG_PAGE_APP_PRIVATE_KEY` |
+
+Both org secrets have visibility "Selected repositories" — new consumer repos must be added to
+that list before they can call this workflow.
 
 The generated app token is restricted to `repositories: [changelog-page]`
 (E3.2). The caller repo does not need any token access to `changelog-page`.
