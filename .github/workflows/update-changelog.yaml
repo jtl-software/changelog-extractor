@@ -1,9 +1,11 @@
 # Reusable workflow (workflow_call) — consumed by connector repos on tag push.
 # Fetches the caller's CHANGELOG via the Contents API (no full checkout),
 # generates a scoped app token for jtl-software/changelog-page, downloads the
-# extractor PHAR from the v2 release of changelog-extractor (public, so the
-# default GITHUB_TOKEN is enough), and opens an auto-merge squash PR in
-# changelog-page. Consumers pin to a v2.x.y ref (or @v2 rolling).
+# extractor PHAR from the release matching the caller's exact pinned commit
+# (public repo, so the default GITHUB_TOKEN is enough), and opens an
+# auto-merge squash PR in changelog-page. Consumers pin `uses:` to an exact
+# commit SHA (see "Resolve PHAR release tag for this exact commit" below for
+# why - no rolling tags).
 name: update-changelog
 
 on:
@@ -45,6 +47,37 @@ jobs:
         run: |
           set -euo pipefail
           echo "ref=${WORKFLOW_REF#*@}" >> "$GITHUB_OUTPUT"
+
+      # There is no rolling release/tag to fall back on - consumers pin
+      # `uses:` to an exact commit SHA, so the PHAR we run has to come from
+      # the release built at that exact commit, or the SHA pin is a lie (the
+      # workflow code would be pinned but the binary it runs wouldn't be).
+      # Looks up which release tag (if any) points at the resolved ref; only
+      # a non-SHA ref (a branch, for an ad-hoc/test dispatch run - never a
+      # real pinned consumer) falls back to the latest v2.x.y release.
+      - name: Resolve PHAR release tag for this exact commit
+        id: phar-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXTRACTOR_REPO: ${{ env.EXTRACTOR_REPO }}
+          WORKFLOW_REF: ${{ steps.workflow-ref.outputs.ref }}
+        run: |
+          set -euo pipefail
+          TAG=""
+          if [[ "${WORKFLOW_REF}" =~ ^[0-9a-f]{40}$ ]]; then
+            TAG="$(gh api "repos/${EXTRACTOR_REPO}/tags" --jq --arg sha "${WORKFLOW_REF}" \
+              '.[] | select(.commit.sha == $sha) | .name' | head -1)"
+          fi
+          if [ -z "${TAG}" ]; then
+            echo "::warning::No release tag points at ref '${WORKFLOW_REF}' - falling back to the latest v2.x.y release. Expected for a branch-ref test/dispatch run, not for a real SHA-pinned consumer."
+            TAG="$(gh api "repos/${EXTRACTOR_REPO}/releases" --jq '.[].tag_name' | grep -E '^v2\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
+          fi
+          if [ -z "${TAG}" ]; then
+            echo "::error::Could not resolve any PHAR release tag (neither an exact match for '${WORKFLOW_REF}' nor a v2.x.y fallback)." >&2
+            exit 1
+          fi
+          echo "Resolved PHAR release tag: ${TAG}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       # Generated first: the token is scoped to changelog-page only, used for
       # its checkout, the PR, and the auto-merge. changelog-extractor is public,
@@ -98,6 +131,7 @@ jobs:
           SYSTEM_NAME: ${{ inputs.system-name }}
           EXTRACTOR_TOKEN: ${{ github.token }}
           EXTRACTOR_REPO: ${{ env.EXTRACTOR_REPO }}
+          EXTRACTOR_RELEASE_TAG: ${{ steps.phar-release.outputs.tag }}
         run: bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" "${SYSTEM_NAME}" "${CHANGELOG_PAGE}" "${RUNNER_TEMP}/CHANGELOG.md"
 
       - name: Derive PR branch name (sanitize ref)

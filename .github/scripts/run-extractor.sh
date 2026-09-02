@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Downloads the v2 PHAR (authenticated) and runs it against an existing context
-# file in the locally checked-out target-repo tree. Merge-in-place semantics:
-# the context JSON at storage/systems/<system-name>.json gets its `changelog`
-# key overwritten with the parsed CHANGELOG.md content.
+# Downloads the PHAR for a specific release tag (authenticated) and runs it
+# against an existing context file in the locally checked-out target-repo
+# tree. Merge-in-place semantics: the context JSON at
+# storage/systems/<system-name>.json gets its `changelog` key overwritten
+# with the parsed CHANGELOG.md content.
 #
 # Usage:
 #   run-extractor.sh <system-name> <target-repo-dir> <changelog-file>
@@ -12,11 +13,17 @@
 #   run-extractor.sh shopify changelog-page /tmp/CHANGELOG.md
 #
 # Required environment variables:
-#   EXTRACTOR_TOKEN  Any valid GitHub token (e.g. the default GITHUB_TOKEN).
-#                    changelog-extractor is public, so no special scope is
-#                    needed; a token just avoids the unauthenticated API rate
-#                    limit.
-#   EXTRACTOR_REPO   owner/repo of the extractor (default: jtl-software/changelog-extractor).
+#   EXTRACTOR_TOKEN        Any valid GitHub token (e.g. the default GITHUB_TOKEN).
+#                          changelog-extractor is public, so no special scope
+#                          is needed; a token just avoids the unauthenticated
+#                          API rate limit.
+#   EXTRACTOR_REPO         owner/repo of the extractor (default: jtl-software/changelog-extractor).
+#   EXTRACTOR_RELEASE_TAG  Release tag to download the PHAR from (e.g.
+#                          v2.2.0). Callers pin `uses:` to an exact commit
+#                          SHA, not a rolling tag, so this must be the release
+#                          tag that matches that same commit for the pin to
+#                          mean anything - see "Resolve PHAR release tag for
+#                          this exact commit" in update-changelog.yaml.
 #
 # Fails (non-zero exit) if the target context file doesn't exist or if any
 # command fails.
@@ -33,6 +40,7 @@ TARGET_REPO_DIR="$2"
 CHANGELOG="$3"
 
 : "${EXTRACTOR_TOKEN:?EXTRACTOR_TOKEN must be set (any valid token, e.g. GITHUB_TOKEN — changelog-extractor is public)}"
+: "${EXTRACTOR_RELEASE_TAG:?EXTRACTOR_RELEASE_TAG must be set (the release tag whose PHAR to download)}"
 EXTRACTOR_REPO="${EXTRACTOR_REPO:-jtl-software/changelog-extractor}"
 
 # Reject system names that could escape storage/systems/ or contain shell
@@ -57,7 +65,7 @@ trap 'rm -rf "${DL_DIR}"' EXIT
 # valid token works (we still pass one to avoid the unauthenticated API rate
 # limit). `gh release download` resolves the asset IDs and follows the
 # signed-URL redirect correctly.
-GH_TOKEN="${EXTRACTOR_TOKEN}" gh release download v2 \
+GH_TOKEN="${EXTRACTOR_TOKEN}" gh release download "${EXTRACTOR_RELEASE_TAG}" \
   --repo "${EXTRACTOR_REPO}" \
   --pattern 'changelog-extractor.phar' \
   --pattern 'changelog-extractor.phar.sha256' \
