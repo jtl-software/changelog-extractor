@@ -1,11 +1,12 @@
 # Reusable workflow (workflow_call) — consumed by connector repos on tag push.
 # Fetches the caller's CHANGELOG via the Contents API (no full checkout),
 # generates a scoped app token for jtl-software/changelog-page, downloads the
-# extractor PHAR from the release matching the caller's exact pinned commit
-# (public repo, so the default GITHUB_TOKEN is enough), and opens an
-# auto-merge squash PR in changelog-page. Consumers pin `uses:` to an exact
-# commit SHA (see "Resolve PHAR release tag for this exact commit" below for
-# why - no rolling tags).
+# extractor PHAR anonymously from the release matching the caller's exact
+# pinned commit (public repo, no token needed - see run-extractor.sh for why
+# a token would actually make this worse), and opens an auto-merge squash PR
+# in changelog-page. Consumers pin `uses:` to an exact commit SHA (see
+# "Resolve PHAR release tag for this exact commit" below for why - no
+# rolling tags).
 name: update-changelog
 
 on:
