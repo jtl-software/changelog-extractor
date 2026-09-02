@@ -41,14 +41,15 @@ jobs:
       CHANGELOG_PAGE: changelog-page
     steps:
       # github.workflow_ref is the CALLER's own triggering ref, not this
-      # reusable workflow's resolved ref - github.job_workflow_ref is the one
-      # that actually names the ref this job's own workflow file was pinned
-      # to. Using the wrong one here made the next step silently fetch
-      # whatever ref the caller happened to be on, from this (unrelated) repo.
+      # reusable workflow's resolved ref - job.workflow_ref (the `job`
+      # context, not `github`) is the one that actually names the ref this
+      # job's own workflow file was pinned to. Using the wrong one here made
+      # the next step silently fetch whatever ref the caller happened to be
+      # on, from this (unrelated) repo.
       - name: Derive reusable workflow ref
         id: workflow-ref
         env:
-          WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          WORKFLOW_REF: ${{ job.workflow_ref }}
         run: |
           set -euo pipefail
           echo "ref=${WORKFLOW_REF#*@}" >> "$GITHUB_OUTPUT"
@@ -70,7 +71,7 @@ jobs:
           set -euo pipefail
           TAG=""
           if [[ "${WORKFLOW_REF}" =~ ^[0-9a-f]{40}$ ]]; then
-            TAG="$(gh api "repos/${EXTRACTOR_REPO}/tags" --jq --arg sha "${WORKFLOW_REF}" \
+            TAG="$(gh api "repos/${EXTRACTOR_REPO}/tags" | jq -r --arg sha "${WORKFLOW_REF}" \
               '.[] | select(.commit.sha == $sha) | .name' | head -1)"
           fi
           if [ -z "${TAG}" ]; then
@@ -131,10 +132,12 @@ jobs:
           extensions: json
           coverage: none
 
+      # Deliberately no token here - see run-extractor.sh's header comment:
+      # a foreign-repo installation token gets rejected by the Releases API
+      # even for this public repo, so the download is anonymous on purpose.
       - name: Download PHAR and extract changelog into system context
         env:
           SYSTEM_NAME: ${{ inputs.system-name }}
-          EXTRACTOR_TOKEN: ${{ github.token }}
           EXTRACTOR_REPO: ${{ env.EXTRACTOR_REPO }}
           EXTRACTOR_RELEASE_TAG: ${{ steps.phar-release.outputs.tag }}
         run: bash "${EXTRACTOR_PATH}/.github/scripts/run-extractor.sh" "${SYSTEM_NAME}" "${CHANGELOG_PAGE}" "${RUNNER_TEMP}/CHANGELOG.md"
