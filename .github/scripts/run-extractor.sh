@@ -30,6 +30,12 @@
 # download` also can't be used here: it refuses to run at all without some
 # locally configured credential, unlike a plain unauthenticated curl.
 #
+# Downloads via the plain github.com release-asset URL (302-redirects
+# anonymously to a signed asset URL, verified empirically), not the
+# api.github.com Releases REST API: one hop per asset instead of an
+# asset-ID lookup plus a separate download call, and it doesn't count
+# against the api.github.com anonymous rate limit at all.
+#
 # Fails (non-zero exit) if the target context file doesn't exist or if any
 # command fails.
 
@@ -67,23 +73,17 @@ trap 'rm -rf "${DL_DIR}"' EXIT
 
 PHAR="${DL_DIR}/changelog-extractor.phar"
 SHA_FILE="${DL_DIR}/changelog-extractor.phar.sha256"
+DOWNLOAD_BASE="https://github.com/${EXTRACTOR_REPO}/releases/download/${EXTRACTOR_RELEASE_TAG}"
 
-# Look up asset IDs for the release, then download each anonymously. No
-# Authorization header anywhere in this block, on purpose (see file header).
-RELEASE_JSON="$(curl -sf "https://api.github.com/repos/${EXTRACTOR_REPO}/releases/tags/${EXTRACTOR_RELEASE_TAG}")"
-
-for pair in "changelog-extractor.phar:${PHAR}" "changelog-extractor.phar.sha256:${SHA_FILE}"; do
-  ASSET_NAME="${pair%%:*}"
-  DEST="${pair#*:}"
-  ASSET_ID="$(echo "${RELEASE_JSON}" | jq -r --arg name "${ASSET_NAME}" '.assets[] | select(.name == $name) | .id')"
-  if [ -z "${ASSET_ID}" ]; then
-    echo "::error::Release '${EXTRACTOR_RELEASE_TAG}' on ${EXTRACTOR_REPO} has no asset named '${ASSET_NAME}'." >&2
-    exit 1
-  fi
-  curl -sfL -H "Accept: application/octet-stream" \
-    -o "${DEST}" \
-    "https://api.github.com/repos/${EXTRACTOR_REPO}/releases/assets/${ASSET_ID}"
-done
+# No Authorization header anywhere in this block, on purpose (see above).
+if ! curl -sfL -o "${PHAR}" "${DOWNLOAD_BASE}/changelog-extractor.phar"; then
+  echo "::error::Could not download changelog-extractor.phar from release '${EXTRACTOR_RELEASE_TAG}' on ${EXTRACTOR_REPO}. Does that release exist with this asset?" >&2
+  exit 1
+fi
+if ! curl -sfL -o "${SHA_FILE}" "${DOWNLOAD_BASE}/changelog-extractor.phar.sha256"; then
+  echo "::error::Could not download changelog-extractor.phar.sha256 from release '${EXTRACTOR_RELEASE_TAG}' on ${EXTRACTOR_REPO}." >&2
+  exit 1
+fi
 
 EXPECTED_SHA="$(awk '{print $1}' "${SHA_FILE}")"
 ACTUAL_SHA="$(sha256sum "${PHAR}" | awk '{print $1}')"

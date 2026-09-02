@@ -35,3 +35,7 @@ jobs:
         with:
           reporter: ${{ github.event_name == 'pull_request' && 'github-pr-review' || 'github-check' }}
           fail_level: error
+          # actionlint 1.7.12's `job` context type doesn't know about
+          # workflow_ref/workflow_sha yet (real GitHub Actions fields,
+          # confirmed working at runtime) - false positive, narrowly ignored.
+          actionlint_flags: -ignore 'property "workflow_ref" is not defined'

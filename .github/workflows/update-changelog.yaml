@@ -59,9 +59,12 @@ jobs:
       # `uses:` to an exact commit SHA, so the PHAR we run has to come from
       # the release built at that exact commit, or the SHA pin is a lie (the
       # workflow code would be pinned but the binary it runs wouldn't be).
-      # Looks up which release tag (if any) points at the resolved ref; only
-      # a non-SHA ref (a branch, for an ad-hoc/test dispatch run - never a
-      # real pinned consumer) falls back to the latest v2.x.y release.
+      # A SHA-shaped ref (every real consumer) MUST find its exact release
+      # tag or the job fails - it never silently falls back, since that
+      # would quietly serve the wrong PHAR to a real pinned consumer instead
+      # of failing loudly. Only a non-SHA ref (a branch, for an ad-hoc/test
+      # dispatch run - never a real pinned consumer) uses the latest v2.x.y
+      # release, because there's nothing exact to look up for a branch.
       - name: Resolve PHAR release tag for this exact commit
         id: phar-release
         env:
@@ -72,16 +75,19 @@ jobs:
           set -euo pipefail
           TAG=""
           if [[ "${WORKFLOW_REF}" =~ ^[0-9a-f]{40}$ ]]; then
-            TAG="$(gh api "repos/${EXTRACTOR_REPO}/tags" | jq -r --arg sha "${WORKFLOW_REF}" \
-              '.[] | select(.commit.sha == $sha) | .name' | head -1)"
-          fi
-          if [ -z "${TAG}" ]; then
-            echo "::warning::No release tag points at ref '${WORKFLOW_REF}' - falling back to the latest v2.x.y release. Expected for a branch-ref test/dispatch run, not for a real SHA-pinned consumer."
-            TAG="$(gh api "repos/${EXTRACTOR_REPO}/releases" --jq '.[].tag_name' | grep -E '^v2\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
-          fi
-          if [ -z "${TAG}" ]; then
-            echo "::error::Could not resolve any PHAR release tag (neither an exact match for '${WORKFLOW_REF}' nor a v2.x.y fallback)." >&2
-            exit 1
+            TAG="$(gh api --paginate "repos/${EXTRACTOR_REPO}/tags" | jq -sr --arg sha "${WORKFLOW_REF}" \
+              'add | .[] | select(.commit.sha == $sha) | .name' | head -1)"
+            if [ -z "${TAG}" ]; then
+              echo "::error::No release tag points at the exact pinned commit '${WORKFLOW_REF}'. A SHA-pinned consumer must point at a commit that has a matching vX.Y.Z release tag - this is not a branch ref, so there is no fallback." >&2
+              exit 1
+            fi
+          else
+            echo "::warning::'${WORKFLOW_REF}' is not a commit SHA - using the latest v2.x.y release. Expected for a branch-ref test/dispatch run, never for a real SHA-pinned consumer."
+            TAG="$(gh api --paginate "repos/${EXTRACTOR_REPO}/releases" --jq '.[].tag_name' | { grep -E '^v2\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -1)"
+            if [ -z "${TAG}" ]; then
+              echo "::error::No v2.x.y release found to fall back to." >&2
+              exit 1
+            fi
           fi
           echo "Resolved PHAR release tag: ${TAG}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
