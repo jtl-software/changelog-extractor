@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Downloads the v2 PHAR (authenticated) and runs it against an existing context
-# file in the locally checked-out target-repo tree. Merge-in-place semantics:
-# the context JSON at storage/systems/<system-name>.json gets its `changelog`
-# key overwritten with the parsed CHANGELOG.md content.
+# Downloads the PHAR for a specific release tag (anonymously) and runs it
+# against an existing context file in the locally checked-out target-repo
+# tree. Merge-in-place semantics: the context JSON at
+# storage/systems/<system-name>.json gets its `changelog` key overwritten
+# with the parsed CHANGELOG.md content.
 #
 # Usage:
 #   run-extractor.sh <system-name> <target-repo-dir> <changelog-file>
@@ -12,11 +13,28 @@
 #   run-extractor.sh shopify changelog-page /tmp/CHANGELOG.md
 #
 # Required environment variables:
-#   EXTRACTOR_TOKEN  Any valid GitHub token (e.g. the default GITHUB_TOKEN).
-#                    changelog-extractor is public, so no special scope is
-#                    needed; a token just avoids the unauthenticated API rate
-#                    limit.
-#   EXTRACTOR_REPO   owner/repo of the extractor (default: jtl-software/changelog-extractor).
+#   EXTRACTOR_REPO         owner/repo of the extractor (default: jtl-software/changelog-extractor).
+#   EXTRACTOR_RELEASE_TAG  Release tag to download the PHAR from (e.g.
+#                          v2.2.0). Callers pin `uses:` to an exact commit
+#                          SHA, not a rolling tag, so this must be the release
+#                          tag that matches that same commit for the pin to
+#                          mean anything - see "Resolve PHAR release tag for
+#                          this exact commit" in update-changelog.yaml.
+#
+# Deliberately anonymous, no token: changelog-extractor is public, and a
+# caller-scoped GitHub Actions installation token (github.token from a
+# DIFFERENT repo's job) gets rejected by the Releases-by-tag/asset REST
+# endpoints even for a public target repo - confirmed empirically, this
+# isn't a guess. A genuinely anonymous request (no Authorization header at
+# all) succeeds where a foreign installation token 404s. `gh release
+# download` also can't be used here: it refuses to run at all without some
+# locally configured credential, unlike a plain unauthenticated curl.
+#
+# Downloads via the plain github.com release-asset URL (302-redirects
+# anonymously to a signed asset URL, verified empirically), not the
+# api.github.com Releases REST API: one hop per asset instead of an
+# asset-ID lookup plus a separate download call, and it doesn't count
+# against the api.github.com anonymous rate limit at all.
 #
 # Fails (non-zero exit) if the target context file doesn't exist or if any
 # command fails.
@@ -32,7 +50,7 @@ SYSTEM_NAME="$1"
 TARGET_REPO_DIR="$2"
 CHANGELOG="$3"
 
-: "${EXTRACTOR_TOKEN:?EXTRACTOR_TOKEN must be set (any valid token, e.g. GITHUB_TOKEN — changelog-extractor is public)}"
+: "${EXTRACTOR_RELEASE_TAG:?EXTRACTOR_RELEASE_TAG must be set (the release tag whose PHAR to download)}"
 EXTRACTOR_REPO="${EXTRACTOR_REPO:-jtl-software/changelog-extractor}"
 
 # Reject system names that could escape storage/systems/ or contain shell
@@ -53,19 +71,19 @@ fi
 DL_DIR="$(mktemp -d)"
 trap 'rm -rf "${DL_DIR}"' EXIT
 
-# changelog-extractor is public, so no special scope is needed here — any
-# valid token works (we still pass one to avoid the unauthenticated API rate
-# limit). `gh release download` resolves the asset IDs and follows the
-# signed-URL redirect correctly.
-GH_TOKEN="${EXTRACTOR_TOKEN}" gh release download v2 \
-  --repo "${EXTRACTOR_REPO}" \
-  --pattern 'changelog-extractor.phar' \
-  --pattern 'changelog-extractor.phar.sha256' \
-  --dir "${DL_DIR}" \
-  --clobber
-
 PHAR="${DL_DIR}/changelog-extractor.phar"
 SHA_FILE="${DL_DIR}/changelog-extractor.phar.sha256"
+DOWNLOAD_BASE="https://github.com/${EXTRACTOR_REPO}/releases/download/${EXTRACTOR_RELEASE_TAG}"
+
+# No Authorization header anywhere in this block, on purpose (see above).
+if ! curl -sfL -o "${PHAR}" "${DOWNLOAD_BASE}/changelog-extractor.phar"; then
+  echo "::error::Could not download changelog-extractor.phar from release '${EXTRACTOR_RELEASE_TAG}' on ${EXTRACTOR_REPO}. Does that release exist with this asset?" >&2
+  exit 1
+fi
+if ! curl -sfL -o "${SHA_FILE}" "${DOWNLOAD_BASE}/changelog-extractor.phar.sha256"; then
+  echo "::error::Could not download changelog-extractor.phar.sha256 from release '${EXTRACTOR_RELEASE_TAG}' on ${EXTRACTOR_REPO}." >&2
+  exit 1
+fi
 
 EXPECTED_SHA="$(awk '{print $1}' "${SHA_FILE}")"
 ACTUAL_SHA="$(sha256sum "${PHAR}" | awk '{print $1}')"

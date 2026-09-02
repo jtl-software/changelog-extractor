@@ -52,7 +52,7 @@ tests/fixtures/        CHANGELOG.md + context.json + expected.json (human refere
 .github/
   workflows/
     check.yaml         CI: PHPCS + PHPStan + fixture self-test + negative test
-    release.yaml       Tag push → build PHAR → GitHub Release + update rolling v2 tag/release
+    release.yaml       Tag push → build PHAR → versioned GitHub Release
     update-changelog.yaml  The reusable workflow consumed by connector repos
     lint-actions.yaml  actionlint on workflow files
   scripts/
@@ -75,4 +75,4 @@ When `--context` is provided, the extractor reads the existing JSON, injects the
 - **PHPCS exits 0 by design** — `phpcs.xml.dist` sets `ignore_errors_on_exit` and `ignore_warnings_on_exit` to preserve legacy GitLab CI behaviour.
 - **PHPStan is non-blocking** (`continue-on-error: true` in `check.yaml`) for the same reason.
 - **Fixture self-test gates the release** — `release.yaml` runs `verify-fixture.sh` before publishing. If it fails, no release is created.
-- **Rolling `v2` tag and release** — `release.yaml` moves both the git tag and the GitHub Release named `v2` on every `v2.x.y` publish. The reusable workflow downloads from the `v2` release asset URL.
+- **No rolling tag or release** — every `v2.x.y` tag gets its own immutable Release. Consumers pin `uses:` to an exact commit SHA; the reusable workflow resolves and downloads the release matching that same commit at runtime (see "Resolve PHAR release tag for this exact commit" in `update-changelog.yaml`).

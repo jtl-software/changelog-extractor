@@ -42,12 +42,15 @@ See the "PHP version upgrade" section below.
 ### E2.2 Distribution as PHAR (release asset)
 
 The reusable workflow downloads the extractor as a PHAR from the GitHub
-release asset on the rolling `v2` tag, not via `composer global require`.
-This gives us:
+release asset, not via `composer global require`. There is no rolling
+release to download from: the workflow resolves which release tag was
+built from the exact commit the consumer pinned `uses:` to (see E2.4) and
+downloads that release's PHAR specifically. This gives us:
 
-- Reproducible builds (the tag pins an exact commit plus its resolved
-  dependencies)
-- Supply chain robustness (no remote package resolution at runtime)
+- Reproducible builds (the resolved release pins an exact commit plus its
+  resolved dependencies)
+- Supply chain robustness (no remote package resolution at runtime, and no
+  rolling pointer that can silently change what a pinned consumer runs)
 - Faster cold runs (one `curl` instead of a Composer install)
 
 ### E2.3 Hard fail on missing context file
@@ -57,11 +60,20 @@ workflow aborts with a clear error message. This matches the GitLab
 behaviour. New systems have to be created manually in `changelog-page`
 first (see "Onboarding new systems").
 
-### E2.4 Versioning: `v2.0.0` + rolling `v2` tag
+### E2.4 Versioning: `v2.x.y` tags, no rolling pointer
 
-The reusable workflow is released via `v2.x.y` tags. Consumers pin to `@v2`
-(rolling) and receive patches automatically. The legacy `1.0.x` tags from
-the GitLab era remain as history but are no longer advanced.
+The reusable workflow is released via `v2.x.y` tags, each with its own
+GitHub Release carrying the PHAR built at that commit. Consumers pin
+`uses:` to the exact commit SHA that tag points at - never a rolling tag
+(`@v2` no longer exists) and never the bare `v2.x.y` tag name either
+(tags are mutable; a SHA isn't). Find the SHA for a given tag with:
+
+```bash
+git rev-parse v2.2.0
+```
+
+The legacy `1.0.x` tags from the GitLab era remain as history but are no
+longer advanced.
 
 ## Using the reusable workflow
 
@@ -80,7 +92,9 @@ on:
 
 jobs:
   call:
-    uses: jtl-software/changelog-extractor/.github/workflows/update-changelog.yaml@v2
+    # Pin to the exact commit SHA of a release tag, never the tag name or a
+    # rolling ref - see "E2.4 Versioning" above.
+    uses: jtl-software/changelog-extractor/.github/workflows/update-changelog.yaml@e4c939fe6535edeb4b432e6a6945664bd2a6d036 # v2.2.0
     with:
       system-name: shopify
       # changelog-file: CHANGELOG.md  # optional, default
@@ -124,11 +138,10 @@ is pushed:
    - Builds `changelog-extractor.phar` via `buildPhar.php`
    - Runs the fixture self-test (`.github/scripts/verify-fixture.sh`)
    - Creates a GitHub release with `changelog-extractor.phar` as an asset
-   - Moves the rolling `v2` tag to the tagged commit (only when the tag
-     starts with `v2`)
 
-If the fixture self-test fails, neither the release nor the tag update is
-published.
+If the fixture self-test fails, the release is not published. Existing
+consumers, pinned to older commit SHAs, are unaffected either way - there
+is nothing rolling for a new release to move underneath them.
 
 ### First release after migration
 

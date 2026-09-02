@@ -1,8 +1,9 @@
 # Triggered on v* tag pushes. Builds the PHAR, runs the fixture self-test
 # (gates the release — nothing is published if it fails), and creates a
 # versioned GitHub Release with the PHAR and SHA256 checksum as assets.
-# For v2.x.y tags, also moves the rolling v2 git tag and the v2 Release
-# (the download target used by the reusable workflow) to the new commit.
+# No rolling tag or rolling Release - consumers pin `uses:` to an exact
+# commit SHA, and the reusable workflow resolves the matching versioned
+# Release for that same commit at runtime (see update-changelog.yaml).
 name: release
 
 on:
@@ -52,39 +53,3 @@ jobs:
             changelog-extractor.phar.sha256
           generate_release_notes: true
           fail_on_unmatched_files: true
-
-      - name: Update rolling v2 git tag
-        if: startsWith(github.ref_name, 'v2')
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "Updating rolling v2 tag to point at ${GITHUB_SHA} (from tag ${GITHUB_REF_NAME})"
-          gh api --method PATCH "repos/${{ github.repository }}/git/refs/tags/v2" \
-            -f sha="${GITHUB_SHA}" \
-            -F force=true \
-          || gh api --method POST "repos/${{ github.repository }}/git/refs" \
-            -f ref="refs/tags/v2" \
-            -f sha="${GITHUB_SHA}"
-
-      # The reusable workflow downloads the PHAR from
-      # https://github.com/jtl-software/changelog-extractor/releases/download/v2/changelog-extractor.phar
-      # which requires a GitHub Release whose tag name is literally `v2`.
-      # The step above only moves the git tag; it does not create or update
-      # the Release. So we publish a second Release with tag_name: v2
-      # that carries the same PHAR. Re-uploading overwrites the existing
-      # asset on subsequent v2.x.y releases.
-      - name: Update rolling v2 Release (download target for reusable workflow)
-        if: startsWith(github.ref_name, 'v2')
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
-        with:
-          tag_name: v2
-          name: v2 (rolling pointer to latest v2.x.y)
-          body: |
-            Rolling release for the `v2` line. The attached PHAR is updated
-            on every `v2.x.y` publish. Exact version info is in the
-            corresponding `v2.x.y` release.
-          files: |
-            changelog-extractor.phar
-            changelog-extractor.phar.sha256
-          fail_on_unmatched_files: true
-          make_latest: false
